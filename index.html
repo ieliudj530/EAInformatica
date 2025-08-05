@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Clientes</title>
+    <title>Registro y Búsqueda de Clientes</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
@@ -16,6 +16,7 @@
             min-height: 100vh;
             margin: 0;
             color: #333;
+            flex-direction: column; /* Nuevo: para alinear los formularios verticalmente */
         }
 
         .form-container {
@@ -26,6 +27,7 @@
             width: 100%;
             max-width: 500px;
             text-align: center;
+            margin-bottom: 25px; /* Nuevo: separación entre formularios */
         }
 
         h2 {
@@ -99,6 +101,20 @@
             color: #f44336;
             opacity: 1;
         }
+        
+        #results-container {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        #results-container p {
+            margin: 5px 0;
+        }
+
+        .result-label {
+            font-weight: bold;
+            color: #6a1b9a;
+        }
     </style>
 </head>
 <body>
@@ -127,13 +143,32 @@
     </form>
 </div>
 
+<div class="form-container">
+    <h2>Buscar Cliente</h2>
+    <form id="searchForm">
+        <div class="form-group">
+            <label for="search-cpf">Buscar por CPF/CNPJ</label>
+            <input type="text" id="search-cpf" name="CPF/CNPJ" required>
+        </div>
+        <button type="submit" class="btn-submit">Buscar</button>
+        <p id="search-message"></p>
+    </form>
+    <div id="results-container">
+        </div>
+</div>
+
 <script>
     const form = document.getElementById('customerForm');
     const message = document.getElementById('form-message');
-
+    const searchForm = document.getElementById('searchForm');
+    const searchMessage = document.getElementById('search-message');
+    const resultsContainer = document.getElementById('results-container');
+    
     // *¡IMPORTANTE!* Reemplaza esta URL con la que copiaste del Apps Script
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbybxe6Iu6rlXzk6_rQLkirk2Vi1couqQ8nFhFh8nSmJ_4bWZarpn5WxVDTLAbKLcMLL/exec'; 
+    // Esta URL ahora manejará tanto el registro como la búsqueda.
+    const scriptURL = 'AQUI_VA_TU_URL_DE_APPS_SCRIPT'; 
 
+    // Lógica para el formulario de registro (la misma de antes)
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -158,6 +193,39 @@
         } catch (error) {
             message.textContent = 'Hubo un problema de conexión. Revisa tu red.';
             message.className = 'error';
+        }
+    });
+
+    // Lógica para el formulario de búsqueda (NUEVA)
+    searchForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        resultsContainer.innerHTML = '';
+        searchMessage.textContent = 'Buscando...';
+        searchMessage.className = '';
+
+        try {
+            const formData = new FormData(searchForm);
+            const response = await fetch(scriptURL + '?action=search&' + new URLSearchParams(formData).toString());
+            const data = await response.json();
+
+            if (data && data.Nome) {
+                // Si encuentra resultados
+                searchMessage.textContent = 'Cliente encontrado:';
+                searchMessage.className = 'success';
+                resultsContainer.innerHTML = `
+                    <p><span class="result-label">Nombre:</span> ${data.Nome}</p>
+                    <p><span class="result-label">CPF/CNPJ:</span> ${data['CPF/CNPJ']}</p>
+                    <p><span class="result-label">Email:</span> ${data.Email}</p>
+                    <p><span class="result-label">Fecha:</span> ${data.Fecha}</p>
+                `;
+            } else {
+                // Si no encuentra resultados
+                searchMessage.textContent = 'No se encontró ningún cliente con ese CPF/CNPJ.';
+                searchMessage.className = 'error';
+            }
+        } catch (error) {
+            searchMessage.textContent = 'Hubo un problema en la búsqueda. Revisa tu red.';
+            searchMessage.className = 'error';
         }
     });
 </script>
