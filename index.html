@@ -165,10 +165,9 @@
     const resultsContainer = document.getElementById('results-container');
     
     // *¡IMPORTANTE!* Reemplaza esta URL con la que copiaste del Apps Script
-    // Esta URL ahora manejará tanto el registro como la búsqueda.
     const scriptURL = 'https://script.google.com/macros/s/AKfycbybxe6Iu6rlXzk6_rQLkirk2Vi1couqQ8nFhFh8nSmJ_4bWZarpn5WxVDTLAbKLcMLL/exec'; 
 
-    // Lógica para el formulario de registro (la misma de antes)
+    // Lógica para el formulario de registro
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -216,7 +215,9 @@
                     <p><span class="result-label">Nombre:</span> ${data.Nome}</p>
                     <p><span class="result-label">CPF/CNPJ:</span> ${data['CPF/CNPJ']}</p>
                     <p><span class="result-label">Email:</span> ${data.Email}</p>
-                    <p><span class="result-label">Fecha:</span> ${data.Fecha}</p>
+                    <p><span class="result-label">Fecha de Registro:</span> ${data.Fecha}</p>
+                    <hr>
+                    <p><strong><span class="result-label">Valor total de compras:</span> R$ ${data.totalCompra}</strong></p>
                 `;
             } else {
                 // Si no encuentra resultados
