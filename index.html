@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro y Búsqueda de Clientes</title>
+    <title>Gestión de Clientes y Compras</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
@@ -16,7 +16,8 @@
             min-height: 100vh;
             margin: 0;
             color: #333;
-            flex-direction: column; /* Nuevo: para alinear los formularios verticalmente */
+            flex-direction: column; 
+            padding: 20px;
         }
 
         .form-container {
@@ -27,7 +28,7 @@
             width: 100%;
             max-width: 500px;
             text-align: center;
-            margin-bottom: 25px; /* Nuevo: separación entre formularios */
+            margin-bottom: 25px; 
         }
 
         h2 {
@@ -85,19 +86,19 @@
             transform: translateY(-2px);
         }
 
-        #form-message {
+        .form-message {
             margin-top: 20px;
             font-weight: 600;
             opacity: 0;
             transition: opacity 0.5s ease-in-out;
         }
 
-        #form-message.success {
+        .form-message.success {
             color: #4CAF50;
             opacity: 1;
         }
 
-        #form-message.error {
+        .form-message.error {
             color: #f44336;
             opacity: 1;
         }
@@ -122,6 +123,7 @@
 <div class="form-container">
     <h2>Registro de Clientes</h2>
     <form id="customerForm">
+        <input type="hidden" name="action" value="addClient">
         <div class="form-group">
             <label for="Nome">Nombre</label>
             <input type="text" id="Nome" name="Nome" required>
@@ -139,7 +141,7 @@
             <input type="date" id="Fecha" name="Fecha" required>
         </div>
         <button type="submit" class="btn-submit">Guardar Cliente</button>
-        <p id="form-message"></p>
+        <p id="form-message" class="form-message"></p>
     </form>
 </div>
 
@@ -151,15 +153,15 @@
             <input type="text" id="search-cpf" name="CPF/CNPJ" required>
         </div>
         <button type="submit" class="btn-submit">Buscar</button>
-        <p id="search-message"></p>
+        <p id="search-message" class="form-message"></p>
     </form>
     <div id="results-container">
         </div>
 </div>
 
 <script>
-    const form = document.getElementById('customerForm');
-    const message = document.getElementById('form-message');
+    const customerForm = document.getElementById('customerForm');
+    const customerMessage = document.getElementById('form-message');
     const searchForm = document.getElementById('searchForm');
     const searchMessage = document.getElementById('search-message');
     const resultsContainer = document.getElementById('results-container');
@@ -167,50 +169,49 @@
     // *¡IMPORTANTE!* Reemplaza esta URL con la que copiaste del Apps Script
     const scriptURL = 'https://script.google.com/macros/s/AKfycbybxe6Iu6rlXzk6_rQLkirk2Vi1couqQ8nFhFh8nSmJ_4bWZarpn5WxVDTLAbKLcMLL/exec'; 
 
-    // Lógica para el formulario de registro
-    form.addEventListener('submit', async (e) => {
+    // Lógica para el formulario de registro de clientes
+    customerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        message.textContent = 'Enviando...';
-        message.className = '';
+        customerMessage.textContent = 'Enviando...';
+        customerMessage.className = 'form-message';
 
         try {
-            const formData = new FormData(form);
+            const formData = new FormData(customerForm);
             const response = await fetch(scriptURL, {
                 method: 'POST',
                 body: formData
             });
 
             if (response.ok) {
-                message.textContent = '¡Cliente registrado con éxito!';
-                message.className = 'success';
-                form.reset();
+                customerMessage.textContent = '¡Cliente registrado con éxito!';
+                customerMessage.className = 'form-message success';
+                customerForm.reset();
             } else {
-                message.textContent = 'Error al registrar el cliente. Por favor, inténtalo de nuevo.';
-                message.className = 'error';
+                customerMessage.textContent = 'Error al registrar el cliente. Por favor, inténtalo de nuevo.';
+                customerMessage.className = 'form-message error';
             }
         } catch (error) {
-            message.textContent = 'Hubo un problema de conexión. Revisa tu red.';
-            message.className = 'error';
+            customerMessage.textContent = 'Hubo un problema de conexión. Revisa tu red.';
+            customerMessage.className = 'form-message error';
         }
     });
 
-    // Lógica para el formulario de búsqueda (NUEVA)
+    // Lógica para el formulario de búsqueda (ACTUALIZADA)
     searchForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         resultsContainer.innerHTML = '';
         searchMessage.textContent = 'Buscando...';
-        searchMessage.className = '';
+        searchMessage.className = 'form-message';
+
+        const searchCpfCnpj = document.getElementById('search-cpf').value;
 
         try {
-            const formData = new FormData(searchForm);
-            const response = await fetch(scriptURL + '?action=search&' + new URLSearchParams(formData).toString());
+            const response = await fetch(scriptURL + '?action=search&CPF/CNPJ=' + searchCpfCnpj);
             const data = await response.json();
 
             if (data && data.Nome) {
-                // Si encuentra resultados
                 searchMessage.textContent = 'Cliente encontrado:';
-                searchMessage.className = 'success';
+                searchMessage.className = 'form-message success';
                 resultsContainer.innerHTML = `
                     <p><span class="result-label">Nombre:</span> ${data.Nome}</p>
                     <p><span class="result-label">CPF/CNPJ:</span> ${data['CPF/CNPJ']}</p>
@@ -218,15 +219,64 @@
                     <p><span class="result-label">Fecha de Registro:</span> ${data.Fecha}</p>
                     <hr>
                     <p><strong><span class="result-label">Valor total de compras:</span> R$ ${data.totalCompra}</strong></p>
+                    
+                    <div style="margin-top: 20px;">
+                        <h3 style="color: #8e24aa;">Registrar Compra para ${data.Nome}</h3>
+                        <form id="purchaseForm">
+                            <input type="hidden" name="action" value="addPurchase">
+                            <input type="hidden" name="CPF/CNPJ" value="${data['CPF/CNPJ']}">
+                            <div class="form-group">
+                                <label for="valor">Valor de la Compra</label>
+                                <input type="text" id="valor" name="Valor" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="purchase-fecha">Fecha de Compra</label>
+                                <input type="date" id="purchase-fecha" name="Fecha" required>
+                            </div>
+                            <button type="submit" class="btn-submit">Guardar Compra</button>
+                            <p id="purchase-message" class="form-message"></p>
+                        </form>
+                    </div>
                 `;
+
+                // Aquí manejamos el nuevo formulario de compra dinámico
+                const purchaseForm = document.getElementById('purchaseForm');
+                const purchaseMessage = document.getElementById('purchase-message');
+
+                purchaseForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    purchaseMessage.textContent = 'Enviando...';
+                    purchaseMessage.className = 'form-message';
+
+                    try {
+                        const formData = new FormData(purchaseForm);
+                        const response = await fetch(scriptURL, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            purchaseMessage.textContent = '¡Compra registrada con éxito!';
+                            purchaseMessage.className = 'form-message success';
+                            purchaseForm.reset();
+                        } else {
+                            purchaseMessage.textContent = 'Error al registrar la compra. Por favor, inténtalo de nuevo.';
+                            purchaseMessage.className = 'form-message error';
+                        }
+                    } catch (error) {
+                        purchaseMessage.textContent = 'Hubo un problema de conexión. Revisa tu red.';
+                        purchaseMessage.className = 'form-message error';
+                    }
+                });
+
+
             } else {
-                // Si no encuentra resultados
                 searchMessage.textContent = 'No se encontró ningún cliente con ese CPF/CNPJ.';
-                searchMessage.className = 'error';
+                searchMessage.className = 'form-message error';
             }
         } catch (error) {
             searchMessage.textContent = 'Hubo un problema en la búsqueda. Revisa tu red.';
-            searchMessage.className = 'error';
+            searchMessage.className = 'form-message error';
         }
     });
 </script>
