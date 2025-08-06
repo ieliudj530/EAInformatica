@@ -245,13 +245,13 @@
 <body>
 
 <div class="container">
-    <div class="tab-menu">
-        <button class="tab-button active" onclick="openTab('clientTab')">Registrar Cliente</button>
-        <button class="tab-button" onclick="openTab('searchTab')">Buscar Cliente & Ventas</button>
-        <button class="tab-button" onclick="openTab('inventoryTab')">Inventario</button>
+    <div class="tab-menu" id="tab-menu">
+        <button class="tab-button" id="tab-client" onclick="openTab('clientTab')">Registrar Cliente</button>
+        <button class="tab-button" id="tab-search" onclick="openTab('searchTab')">Buscar Cliente & Ventas</button>
+        <button class="tab-button" id="tab-inventory" onclick="openTab('inventoryTab')">Inventario</button>
     </div>
 
-    <div id="clientTab" class="tab-content active">
+    <div id="clientTab" class="tab-content">
         <div class="form-container">
             <h2>Registro de Clientes</h2>
             <form id="customerForm">
@@ -282,7 +282,7 @@
         <div class="form-container">
             <h2>Buscar Cliente y Registrar Venta</h2>
             <form id="searchForm">
-                <div class="form-group">
+                <div class="form-group" id="search-cpf-container">
                     <label for="search-cpf">Buscar por CPF/CNPJ</label>
                     <input type="text" id="search-cpf" name="CPF/CNPJ" required>
                 </div>
@@ -299,6 +299,27 @@
             <div id="inventory-list">
                 <p>Cargando inventario...</p>
             </div>
+            
+            <div id="add-product-container" style="display:none;">
+                <h3 style="color: #8e24aa;">Agregar Nuevo Producto</h3>
+                <form id="addProductForm">
+                    <input type="hidden" name="action" value="addProduct">
+                    <div class="form-group">
+                        <label for="product-name">Nombre del Producto</label>
+                        <input type="text" id="product-name" name="Nombre_del_producto" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-price">Precio</label>
+                        <input type="number" id="product-price" name="Precio" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-stock">Stock</label>
+                        <input type="number" id="product-stock" name="Stock" min="0" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Agregar Producto</button>
+                    <p id="add-product-message" class="form-message"></p>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -308,7 +329,57 @@
 
     let allProducts = [];
     let salesProducts = [];
+    let userRole = null;
 
+    async function loadApp() {
+        try {
+            const roleResponse = await fetch(scriptURL + '?action=getRole');
+            const roleData = await roleResponse.json();
+            userRole = roleData.role;
+
+            const tabClient = document.getElementById('tab-client');
+            const clientTab = document.getElementById('clientTab');
+            const tabSearch = document.getElementById('tab-search');
+            const tabInventory = document.getElementById('tab-inventory');
+            const searchCpfContainer = document.getElementById('search-cpf-container');
+            const addProductContainer = document.getElementById('add-product-container');
+
+            if (userRole === 'admin') {
+                tabClient.style.display = 'block';
+                clientTab.style.display = 'block';
+                tabClient.classList.add('active');
+                
+                tabSearch.style.display = 'block';
+                tabInventory.style.display = 'block';
+                searchCpfContainer.style.display = 'block';
+                addProductContainer.style.display = 'block';
+
+            } else { // cliente o rol desconocido
+                tabClient.style.display = 'none';
+                clientTab.style.display = 'none';
+                
+                tabSearch.style.display = 'block';
+                tabInventory.style.display = 'block';
+                searchCpfContainer.style.display = 'none';
+                addProductContainer.style.display = 'none';
+                
+                document.getElementById('searchTab').style.display = 'block';
+                tabSearch.classList.add('active');
+
+                // Si el usuario es un cliente, ejecuta la búsqueda automáticamente
+                searchForm.dispatchEvent(new Event('submit'));
+            }
+
+            // Cargar productos para el registro de ventas y la tabla de inventario
+            const productsResponse = await fetch(scriptURL + '?action=getProducts');
+            allProducts = await productsResponse.json();
+            
+        } catch (error) {
+            console.error("Error al cargar la aplicación:", error);
+            alert("Hubo un problema al cargar la aplicación. Por favor, recarga la página.");
+        }
+    }
+    
     function openTab(tabName) {
         var i, tabContent, tabButtons;
         tabContent = document.getElementsByClassName("tab-content");
@@ -355,35 +426,39 @@
         }
     }
 
-    const customerForm = document.getElementById('customerForm');
-    const customerMessage = document.getElementById('form-message');
-    customerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        customerMessage.textContent = 'Enviando...';
-        customerMessage.className = 'form-message';
-        try {
-            const formData = new FormData(customerForm);
-            const response = await fetch(scriptURL, { method: 'POST', body: formData });
-            const resultText = await response.text();
-            if (response.ok) {
-                if (resultText.includes("Error")) {
-                    customerMessage.textContent = resultText;
-                    customerMessage.className = 'form-message error';
-                } else {
-                    customerMessage.textContent = '¡Cliente registrado con éxito!';
-                    customerMessage.className = 'form-message success';
-                    customerForm.reset();
-                }
-            } else {
-                customerMessage.textContent = 'Error al registrar el cliente.';
-                customerMessage.className = 'form-message error';
-            }
-        } catch (error) {
-            customerMessage.textContent = 'Hubo un problema de conexión.';
-            customerMessage.className = 'form-message error';
-        }
-    });
+    // Lógica para el formulario de registro de cliente (solo admins)
+    if (userRole === 'admin') {
+      const customerForm = document.getElementById('customerForm');
+      const customerMessage = document.getElementById('form-message');
+      customerForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          customerMessage.textContent = 'Enviando...';
+          customerMessage.className = 'form-message';
+          try {
+              const formData = new FormData(customerForm);
+              const response = await fetch(scriptURL, { method: 'POST', body: formData });
+              const resultText = await response.text();
+              if (response.ok) {
+                  if (resultText.includes("Error")) {
+                      customerMessage.textContent = resultText;
+                      customerMessage.className = 'form-message error';
+                  } else {
+                      customerMessage.textContent = '¡Cliente registrado con éxito!';
+                      customerMessage.className = 'form-message success';
+                      customerForm.reset();
+                  }
+              } else {
+                  customerMessage.textContent = 'Error al registrar el cliente.';
+                  customerMessage.className = 'form-message error';
+              }
+          } catch (error) {
+              customerMessage.textContent = 'Hubo un problema de conexión.';
+              customerMessage.className = 'form-message error';
+          }
+      });
+    }
 
+    // Lógica para el formulario de búsqueda (para admins y clientes)
     const searchForm = document.getElementById('searchForm');
     const searchMessage = document.getElementById('search-message');
     const resultsContainer = document.getElementById('results-container');
@@ -395,17 +470,15 @@
         searchMessage.className = 'form-message';
         const searchCpfCnpj = document.getElementById('search-cpf').value;
         try {
-            const response = await fetch(scriptURL + '?action=search&CPF/CNPJ=' + searchCpfCnpj);
+            const url = userRole === 'admin' ? 
+                scriptURL + '?action=search&CPF/CNPJ=' + searchCpfCnpj : 
+                scriptURL + '?action=search'; // El Apps Script usará el CPF del usuario autenticado
+            const response = await fetch(url);
             const data = await response.json();
             if (data && data.Nome) {
                 searchMessage.textContent = 'Cliente encontrado:';
                 searchMessage.className = 'form-message success';
                 
-                if (allProducts.length === 0) {
-                    const productsResponse = await fetch(scriptURL + '?action=getProducts');
-                    allProducts = await productsResponse.json();
-                }
-
                 let salesHtml = data.sales.length > 0
                     ? `<h4>Historial de Ventas:</h4>
                        <ul>
@@ -417,7 +490,7 @@
                                    <span class="result-label">Deuda:</span> R$ ${sale.deudaRestante.toFixed(2)}</p>
                                    <p><span class="result-label">Fecha:</span> ${new Date(sale.fecha).toLocaleDateString()}
                                    <button onclick="toggleSaleDetails(this)">+</button>
-                                   ${sale.estado === 'Pendiente' ? `<button class="btn-pay" onclick="showPaymentForm(${sale.id}, ${sale.deudaRestante})">Pagar</button>` : `<span style="color:#4CAF50; font-weight:bold;">(Pagado)</span>`}</p>
+                                   ${sale.estado === 'Pendiente' && userRole === 'admin' ? `<button class="btn-pay" onclick="showPaymentForm(${sale.id}, ${sale.deudaRestante})">Pagar</button>` : `<span style="color:#4CAF50; font-weight:bold;">(${sale.estado})</span>`}</p>
                                    
                                    <div class="sale-details" style="display:none;">
                                         <ul>
@@ -437,7 +510,8 @@
                     <hr>
                     <p class="total-debt-info"><strong>Deuda Total Pendiente: R$ ${data.totalDebt}</strong></p>
                     
-                    <div style="margin-top: 20px;">
+                    ${userRole === 'admin' ? 
+                    `<div style="margin-top: 20px;">
                         <h3 style="color: #8e24aa;">Registrar Nueva Venta para ${data.Nome}</h3>
                         <form id="saleForm">
                             <input type="hidden" name="action" value="addSale">
@@ -461,57 +535,64 @@
                             <button type="submit" class="btn-submit">Guardar Venta</button>
                             <p id="sale-message" class="form-message"></p>
                         </form>
-                    </div>
+                    </div>` : ''}
 
                     ${salesHtml}
                 `;
                 salesProducts = [];
-                addProductField();
+                if (userRole === 'admin') {
+                    addProductField();
+                    const saleForm = document.getElementById('saleForm');
+                    const saleMessage = document.getElementById('sale-message');
+                    saleForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        saleMessage.textContent = 'Calculando y enviando...';
+                        saleMessage.className = 'form-message';
+                        
+                        let total = 0;
+                        const finalProducts = [];
+                        salesProducts.forEach(p => {
+                            const product = allProducts.find(prod => prod.ID_Producto == p.id);
+                            if (product) {
+                                total += product.Precio * p.cantidad;
+                                finalProducts.push({
+                                    id: product.ID_Producto,
+                                    nombre: product.Nombre_del_producto,
+                                    cantidad: p.cantidad
+                                });
+                            }
+                        });
 
-                const saleForm = document.getElementById('saleForm');
-                const saleMessage = document.getElementById('sale-message');
-                saleForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    saleMessage.textContent = 'Calculando y enviando...';
-                    saleMessage.className = 'form-message';
-                    
-                    let total = 0;
-                    const finalProducts = [];
-                    salesProducts.forEach(p => {
-                        const product = allProducts.find(prod => prod.ID_Producto == p.id);
-                        if (product) {
-                            total += product.Precio * p.cantidad;
-                            finalProducts.push({
-                                id: product.ID_Producto,
-                                nombre: product.Nombre_del_producto,
-                                cantidad: p.cantidad
-                            });
-                        }
-                    });
+                        document.getElementById('totalAmount').value = total;
+                        document.getElementById('productsJson').value = JSON.stringify(finalProducts);
 
-                    document.getElementById('totalAmount').value = total;
-                    document.getElementById('productsJson').value = JSON.stringify(finalProducts);
-
-                    try {
-                        const formData = new FormData(saleForm);
-                        const response = await fetch(scriptURL, { method: 'POST', body: formData });
-                        if (response.ok) {
-                            saleMessage.textContent = '¡Venta registrada con éxito!';
-                            saleMessage.className = 'form-message success';
-                            saleForm.reset();
-                            salesProducts = [];
-                            resultsContainer.innerHTML = '';
-                            searchForm.dispatchEvent(new Event('submit'));
-                        } else {
-                            saleMessage.textContent = 'Error al registrar la venta.';
+                        try {
+                            const formData = new FormData(saleForm);
+                            const response = await fetch(scriptURL, { method: 'POST', body: formData });
+                            const resultText = await response.text();
+                            if (response.ok) {
+                                if (resultText.includes("Error")) {
+                                    saleMessage.textContent = resultText;
+                                    saleMessage.className = 'form-message error';
+                                } else {
+                                    saleMessage.textContent = '¡Venta registrada con éxito!';
+                                    saleMessage.className = 'form-message success';
+                                    saleForm.reset();
+                                    salesProducts = [];
+                                    resultsContainer.innerHTML = '';
+                                    searchForm.dispatchEvent(new Event('submit'));
+                                }
+                            } else {
+                                saleMessage.textContent = 'Error al registrar la venta.';
+                                saleMessage.className = 'form-message error';
+                            }
+                        } catch (error) {
+                            saleMessage.textContent = 'Hubo un problema de conexión.';
                             saleMessage.className = 'form-message error';
                         }
-                    } catch (error) {
-                        saleMessage.textContent = 'Hubo un problema de conexión.';
-                        saleMessage.className = 'form-message error';
-                    }
-                });
-
+                    });
+                }
+                
             } else {
                 searchMessage.textContent = 'No se encontró ningún cliente con ese CPF/CNPJ.';
                 searchMessage.className = 'form-message error';
@@ -676,6 +757,42 @@
         const details = button.nextElementSibling.nextElementSibling;
         details.style.display = details.style.display === 'none' ? 'block' : 'none';
     }
+
+    // Lógica para el formulario de agregar producto (solo admins)
+    const addProductForm = document.getElementById('addProductForm');
+    const addProductMessage = document.getElementById('add-product-message');
+    if (addProductForm) {
+      addProductForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        addProductMessage.textContent = 'Agregando producto...';
+        addProductMessage.className = 'form-message';
+        try {
+          const formData = new FormData(addProductForm);
+          const response = await fetch(scriptURL, { method: 'POST', body: formData });
+          const resultText = await response.text();
+          if (response.ok) {
+            if (resultText.includes("Error")) {
+              addProductMessage.textContent = resultText;
+              addProductMessage.className = 'form-message error';
+            } else {
+              addProductMessage.textContent = '¡Producto agregado con éxito!';
+              addProductMessage.className = 'form-message success';
+              addProductForm.reset();
+              loadInventory(); // Recargar el inventario para ver el nuevo producto
+            }
+          } else {
+            addProductMessage.textContent = 'Error al agregar el producto.';
+            addProductMessage.className = 'form-message error';
+          }
+        } catch (error) {
+          addProductMessage.textContent = 'Hubo un problema de conexión.';
+          addProductMessage.className = 'form-message error';
+        }
+      });
+    }
+    
+    // Ejecutar al cargar la página
+    document.addEventListener('DOMContentLoaded', loadApp);
 
 </script>
 </body>
