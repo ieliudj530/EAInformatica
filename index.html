@@ -20,6 +20,34 @@
             padding: 20px;
             position: relative; /* Necessário para posicionar o botão do manual */
         }
+        
+        /* Estilos del overlay de carga */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #6a1b9a;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
         .container {
             width: 100%;
@@ -267,6 +295,9 @@
         .inventory-table tr:hover {
             background-color: #333;
         }
+        .inventory-table td:last-child {
+            text-align: right;
+        }
 
         /* Estilos para el botón del manual */
         #user-manual-button {
@@ -373,9 +404,55 @@
             margin: 5px 0;
         }
 
+        /* Estilos para el menú de 3 puntos */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropbtn {
+            background-color: transparent;
+            color: #ccc;
+            padding: 8px;
+            font-size: 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #333;
+            min-width: 120px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+            z-index: 1;
+            right: 0;
+            border-radius: 5px;
+        }
+
+        .dropdown-content a {
+            color: white;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #4CAF50;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
     </style>
 </head>
 <body>
+
+<div id="loading-overlay">
+    <div class="spinner"></div>
+</div>
 
 <div id="user-manual-button" onclick="toggleManual()">Manual de Usuario</div>
 
@@ -495,9 +572,9 @@
                 <p>Cargando inventario...</p>
             </div>
             
-            <div class="inventory-form-section">
+            <div class="inventory-form-section" id="addProductSection">
                 <form id="addProductForm">
-                    <h3 style="color: #8e24aa;">Agregar o Actualizar Producto</h3>
+                    <h3 style="color: #8e24aa;">Agregar Nuevo Producto</h3>
                     
                     <div class="form-group">
                         <label for="product-name">Nombre del Producto</label>
@@ -505,18 +582,44 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="product-price">Precio (Solo si es un producto nuevo)</label>
-                        <input type="number" id="product-price" name="Precio" step="0.01" min="0">
+                        <label for="product-price">Precio</label>
+                        <input type="number" id="product-price" name="Precio" step="0.01" min="0" required>
                     </div>
 
                     <div class="form-group">
                         <label for="product-stock">Stock a añadir</label>
                         <input type="number" id="product-stock" name="Stock" min="0" required>
                     </div>
-                    <button type="submit" class="btn-submit">Guardar Cambios</button>
+                    <button type="submit" class="btn-submit">Agregar Producto</button>
                     <p id="add-product-message" class="form-message"></p>
                 </form>
             </div>
+            
+            <div class="inventory-form-section" id="editProductSection" style="display:none;">
+                <form id="editProductForm">
+                    <h3 style="color: #8e24aa;">Editar Producto</h3>
+                    <input type="hidden" id="edit-product-id" name="ID_Producto">
+                    
+                    <div class="form-group">
+                        <label for="edit-product-name">Nombre del Producto</label>
+                        <input type="text" id="edit-product-name" name="Nombre_del_producto" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-product-price">Precio</label>
+                        <input type="number" id="edit-product-price" name="Precio" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-product-stock">Stock a modificar (se sumará al stock actual)</label>
+                        <input type="number" id="edit-product-stock" name="Stock" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Guardar Cambios</button>
+                    <button type="button" class="btn-submit" onclick="cancelEdit()">Cancelar</button>
+                    <p id="edit-product-message" class="form-message"></p>
+                </form>
+            </div>
+
         </div>
     </div>
 
@@ -536,6 +639,14 @@
     let allProducts = [];
     let salesProducts = [];
 
+    function showLoading() {
+        document.getElementById('loading-overlay').style.display = 'flex';
+    }
+
+    function hideLoading() {
+        document.getElementById('loading-overlay').style.display = 'none';
+    }
+
     async function loadApp() {
         try {
             openTab('clientTab', document.getElementById('tab-client'));
@@ -549,6 +660,7 @@
     }
 
     async function fetchProducts() {
+        showLoading();
         try {
             const productsResponse = await fetch(scriptURL + '?action=getProducts');
             if (!productsResponse.ok) throw new Error('Error al obtener los productos.');
@@ -556,6 +668,8 @@
         } catch (error) {
             console.error("Error al cargar los productos:", error);
             allProducts = []; // Asegura que allProducts sea un array vacío si falla
+        } finally {
+            hideLoading();
         }
     }
     
@@ -575,6 +689,8 @@
         }
         if (tabName === 'inventoryTab') {
             loadInventory();
+            document.getElementById('addProductSection').style.display = 'block';
+            document.getElementById('editProductSection').style.display = 'none';
         } else if (tabName === 'debtTab') {
             loadPendingSales();
         }
@@ -589,7 +705,7 @@
 
         if (allProducts.length > 0) {
             let html = '<table class="inventory-table">';
-            html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th></tr></thead>';
+            html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th><th></th></tr></thead>';
             html += '<tbody>';
             allProducts.forEach(product => {
                 html += `<tr>
@@ -597,6 +713,15 @@
                            <td>${product['Nombre_del_producto']}</td>
                            <td>R$ ${product.Precio.toFixed(2)}</td>
                            <td>${product.Stock}</td>
+                           <td>
+                                <div class="dropdown">
+                                    <button class="dropbtn">...</button>
+                                    <div class="dropdown-content">
+                                        <a href="#" onclick="editProduct('${product['ID_Producto']}', '${product['Nombre_del_producto']}', '${product.Precio}', '${product.Stock}')">Editar</a>
+                                        <a href="#" onclick="deleteProduct('${product['ID_Producto']}')">Borrar</a>
+                                    </div>
+                                </div>
+                           </td>
                          </tr>`;
             });
             html += '</tbody></table>';
@@ -605,10 +730,58 @@
             inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
         }
     }
+    
+    function editProduct(id, name, price, stock) {
+        document.getElementById('addProductSection').style.display = 'none';
+        document.getElementById('editProductSection').style.display = 'block';
+        
+        document.getElementById('edit-product-id').value = id;
+        document.getElementById('edit-product-name').value = name;
+        document.getElementById('edit-product-price').value = price;
+        document.getElementById('edit-product-stock').value = 0;
+    }
+    
+    function cancelEdit() {
+        document.getElementById('editProductForm').reset();
+        document.getElementById('addProductSection').style.display = 'block';
+        document.getElementById('editProductSection').style.display = 'none';
+    }
+    
+    async function deleteProduct(id) {
+        if (!confirm('¿Estás seguro de que quieres borrar este producto? Esta acción es irreversible.')) {
+            return;
+        }
+        
+        showLoading();
+        try {
+            const formData = new FormData();
+            formData.append('action', 'deleteProduct');
+            formData.append('ID_Producto', id);
+            
+            const response = await fetch(scriptURL, { method: 'POST', body: formData });
+            const resultText = await response.text();
+            
+            if (response.ok) {
+                if (resultText.includes("Error")) {
+                    alert(resultText);
+                } else {
+                    alert('Producto eliminado con éxito.');
+                    loadInventory();
+                }
+            } else {
+                alert('Error al procesar la solicitud.');
+            }
+        } catch (error) {
+            alert('Hubo un problema de conexión.');
+        } finally {
+            hideLoading();
+        }
+    }
 
     async function loadPendingSales() {
         const debtList = document.getElementById('debt-list');
         debtList.innerHTML = '<p>Cargando cuentas pendientes...</p>';
+        showLoading();
         try {
             const response = await fetch(scriptURL + '?action=getPendingSales');
             const groupedSales = await response.json();
@@ -634,6 +807,8 @@
         } catch (error) {
             console.error("Error al cargar las cuentas pendientes:", error);
             debtList.innerHTML = '<p>Error al cargar las cuentas pendientes. Asegúrate de que las columnas en tu hoja "Ventas" están escritas correctamente.</p>';
+        } finally {
+            hideLoading();
         }
     }
     
@@ -653,6 +828,7 @@
           e.preventDefault();
           customerMessage.textContent = 'Enviando...';
           customerMessage.className = 'form-message';
+          showLoading();
           try {
               const formData = new FormData(customerForm);
               const response = await fetch(scriptURL, { method: 'POST', body: formData });
@@ -673,6 +849,8 @@
           } catch (error) {
               customerMessage.textContent = 'Hubo un problema de conexión.';
               customerMessage.className = 'form-message error';
+          } finally {
+              hideLoading();
           }
       });
     }
@@ -686,6 +864,7 @@
         resultsContainer.innerHTML = '';
         searchMessage.textContent = 'Buscando...';
         searchMessage.className = 'form-message';
+        showLoading();
         const searchCpfCnpj = document.getElementById('search-cpf').value;
 
         try {
@@ -766,6 +945,7 @@
                     e.preventDefault();
                     saleMessage.textContent = 'Calculando y enviando...';
                     saleMessage.className = 'form-message';
+                    showLoading();
                     
                     let total = 0;
                     const finalProducts = [];
@@ -807,6 +987,8 @@
                     } catch (error) {
                         saleMessage.textContent = 'Hubo un problema de conexión.';
                         saleMessage.className = 'form-message error';
+                    } finally {
+                        hideLoading();
                     }
                 });
                 
@@ -817,6 +999,8 @@
         } catch (error) {
             searchMessage.textContent = 'Hubo un problema en la búsqueda: ' + error.message;
             searchMessage.className = 'form-message error';
+        } finally {
+            hideLoading();
         }
     });
     
@@ -824,6 +1008,7 @@
         const paymentMessage = document.getElementById(`payment-message-${saleId}`);
         paymentMessage.textContent = 'Registrando pago...';
         paymentMessage.className = 'form-message';
+        showLoading();
         try {
             const formData = new FormData();
             formData.append('action', 'addPayment');
@@ -848,6 +1033,8 @@
         } catch (error) {
             paymentMessage.textContent = 'Hubo un problema de conexión.';
             paymentMessage.className = 'form-message error';
+        } finally {
+            hideLoading();
         }
     }
 
@@ -892,7 +1079,7 @@
 
         const productSelect = document.createElement('select');
         productSelect.innerHTML = allProducts.map(p => 
-            `<option value="${p.ID_Producto}" data-price="${p.Precio}">${p.Nombre_del_producto}</option>`
+            `<option value="${p.ID_Producto}" data-price="${p.Precio}" data-stock="${p.Stock}">${p.Nombre_del_producto} (Stock: ${p.Stock})</option>`
         ).join('');
         productSelect.onchange = (e) => updateProduct(index, e.target.value, salesProducts[index].cantidad);
 
@@ -942,7 +1129,7 @@
         salesProducts.forEach((p, i) => {
             const productSelect = document.createElement('select');
             productSelect.innerHTML = allProducts.map(prod => 
-                `<option value="${prod.ID_Producto}" data-price="${prod.Precio}">${prod.Nombre_del_producto}</option>`
+                `<option value="${prod.ID_Producto}" data-price="${prod.Precio}" data-stock="${prod.Stock}">${prod.Nombre_del_producto} (Stock: ${prod.Stock})</option>`
             ).join('');
             productSelect.value = p.id;
             productSelect.onchange = (e) => updateProduct(i, e.target.value, salesProducts[i].cantidad);
@@ -987,6 +1174,7 @@
         e.preventDefault();
         addProductMessage.textContent = 'Enviando...';
         addProductMessage.className = 'form-message';
+        showLoading();
         
         const productName = document.getElementById('product-name').value;
         const productPrice = document.getElementById('product-price').value;
@@ -995,11 +1183,13 @@
         if (!productName.trim()) {
             addProductMessage.textContent = 'El nombre del producto es obligatorio.';
             addProductMessage.className = 'form-message error';
+            hideLoading();
             return;
         }
         if (!productStock || parseInt(productStock) <= 0) {
             addProductMessage.textContent = 'La cantidad a añadir debe ser un número positivo.';
             addProductMessage.className = 'form-message error';
+            hideLoading();
             return;
         }
 
@@ -1030,6 +1220,57 @@
         } catch (error) {
           addProductMessage.textContent = 'Hubo un problema de conexión.';
           addProductMessage.className = 'form-message error';
+        } finally {
+            hideLoading();
+        }
+      });
+    }
+    
+    const editProductForm = document.getElementById('editProductForm');
+    const editProductMessage = document.getElementById('edit-product-message');
+    if (editProductForm) {
+      editProductForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        editProductMessage.textContent = 'Enviando...';
+        editProductMessage.className = 'form-message';
+        showLoading();
+        
+        const productId = document.getElementById('edit-product-id').value;
+        const productName = document.getElementById('edit-product-name').value;
+        const productPrice = document.getElementById('edit-product-price').value;
+        const productStock = document.getElementById('edit-product-stock').value;
+
+        const formData = new FormData();
+        formData.append('action', 'updateProduct');
+        formData.append('ID_Producto', productId);
+        formData.append('Nombre_del_producto', productName);
+        formData.append('Precio', productPrice);
+        formData.append('Stock', productStock);
+        
+
+        try {
+          const response = await fetch(scriptURL, { method: 'POST', body: formData });
+          const resultText = await response.text();
+          if (response.ok) {
+            if (resultText.includes("Error")) {
+              editProductMessage.textContent = resultText;
+              editProductMessage.className = 'form-message error';
+            } else {
+              editProductMessage.textContent = '¡Operación exitosa!';
+              editProductMessage.className = 'form-message success';
+              editProductForm.reset();
+              loadInventory();
+              cancelEdit();
+            }
+          } else {
+            editProductMessage.textContent = 'Error al procesar la solicitud.';
+            editProductMessage.className = 'form-message error';
+          }
+        } catch (error) {
+          editProductMessage.textContent = 'Hubo un problema de conexión.';
+          editProductMessage.className = 'form-message error';
+        } finally {
+            hideLoading();
         }
       });
     }
