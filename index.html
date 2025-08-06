@@ -458,54 +458,93 @@
 
 <div id="user-manual-content">
     <h2>Manual de Usuario</h2>
-    <p>Bienvenido al sistema de gestión de clientes, ventas e inventario. Este manual te guiará a través de las funciones principales de la aplicación.</p>
+    <p>Bienvenido a <strong>EAInformática Gestión</strong>, una herramienta integral para gestionar clientes, ventas, inventario y cuentas por cobrar. Este sistema fue diseñado para pequeñas empresas que desean llevar un control digital y eficiente de sus operaciones sin depender de software costoso.</p>
 
     <div class="manual-section">
-        <h3>1. Pestaña "Registrar Cliente"</h3>
-        <p>Usa esta sección para añadir nuevos clientes a tu base de datos. Completa todos los campos del formulario y haz clic en el botón.</p>
+        <h3>Requisitos Técnicos</h3>
         <ul>
-            <li><strong>Nombre:</strong> Nombre completo del cliente.</li>
-            <li><strong>CPF/CNPJ:</strong> Número de identificación del cliente (sin puntos ni guiones).</li>
-            <li><strong>Email:</strong> Correo electrónico del cliente.</li>
-            <li><strong>Teléfono:</strong> Número de teléfono del cliente.</li>
-            <li><strong>Dirección:</strong> Dirección del cliente.</li>
-            <li><strong>Fecha:</strong> Fecha de registro del cliente.</li>
-        </ul>
-        <p>Al hacer clic en <strong>"Guardar Cliente"</strong>, la información se guardará en la hoja de cálculo <code>Clientes</code>.</p>
-    </div>
-
-    <div class="manual-section">
-        <h3>2. Pestaña "Buscar Cliente & Ventas"</h3>
-        <p>Esta es la sección central del sistema. Te permite encontrar un cliente, ver su historial de ventas, registrar una nueva venta y registrar pagos.</p>
-        <h4>2.1. Buscar Cliente</h4>
-        <p>En el campo de búsqueda, introduce el <strong>CPF/CNPJ</strong> del cliente y haz clic en <strong>"Buscar"</strong>. Si el cliente existe, sus datos aparecerán debajo, junto con su historial de ventas y la opción para registrar una nueva.</p>
-        <h4>2.2. Registrar Nueva Venta</h4>
-        <p>Después de buscar un cliente, usa este formulario para añadir una nueva venta a su historial.</p>
-        <ul>
-            <li><strong>Fecha de Venta:</strong> Selecciona la fecha en la que se realizó la venta.</li>
-            <li><strong>Añadir Productos:</strong> Usa el botón <code>+</code> para añadir una línea de producto. Selecciona un producto del inventario y la cantidad. El botón <code>-</code> elimina la línea.</li>
-            <li><strong>Abono Inicial (opcional):</strong> Si el cliente paga una parte del total, ingresa el monto aquí.</li>
-        </ul>
-        <p>Al hacer clic en <strong>"Guardar Venta"</strong>, la venta se registrará en la hoja <code>Ventas</code> y se actualizará el stock en la hoja <code>Productos</code>.</p>
-        <h4>2.3. Historial de Ventas</h4>
-        <p>Aquí verás todas las ventas registradas para el cliente. Cada venta muestra su estado (<strong>"Pagado"</strong> o <strong>"Pendiente"</strong>) y la deuda restante.</p>
-        <ul>
-            <li>El botón <code>+</code> junto a cada venta muestra la lista de productos que se compraron.</li>
-            <li>Si una venta tiene deuda, aparecerá un botón verde <strong>"Pagar"</strong>. Haz clic en él para registrar un abono a esa deuda.</li>
+            <li>Navegador actualizado (Google Chrome recomendado).</li>
+            <li>Conexión a internet estable.</li>
+            <li>Acceso autorizado al sistema (URL personalizada).</li>
         </ul>
     </div>
 
     <div class="manual-section">
-        <h3>3. Pestaña "Inventario"</h3>
-        <p>Esta sección te permite gestionar tu inventario de productos. En la tabla superior puedes ver todos los productos disponibles, sus precios y el stock actual. El stock se actualiza automáticamente cada vez que se registra una venta.</p>
-        <h4>3.1. Agregar o Actualizar Productos</h4>
-        <p>Usa este formulario para añadir nuevos productos o actualizar el stock de los existentes.</p>
+        <h3>1. Registrar Cliente</h3>
+        <p>Completa todos los campos del formulario y haz clic en <strong>"Guardar Cliente"</strong>. La información se guarda en la hoja <code>Clientes</code>.</p>
         <ul>
-            <li><strong>Si el nombre del producto YA existe</strong> en la lista, el sistema le sumará la cantidad que especifiques al stock actual. El campo de precio no es necesario.</li>
-            <li><strong>Si el nombre del producto NO existe</strong>, se creará un nuevo producto con el precio y el stock inicial que indiques. En este caso, el campo de precio es obligatorio.</li>
+            <li><strong>Nombre:</strong> Nombre completo.</li>
+            <li><strong>CPF/CNPJ:</strong> Identificación fiscal (sin puntos ni guiones).</li>
+            <li><strong>Email:</strong> Correo electrónico válido.</li>
+            <li><strong>Teléfono/Dirección:</strong> Opcionales pero recomendados.</li>
+            <li><strong>Fecha:</strong> Fecha del registro.</li>
         </ul>
+    </div>
+
+    <div class="manual-section">
+        <h3>2. Buscar Cliente & Registrar Venta</h3>
+        <h4>2.1 Buscar Cliente</h4>
+        <p>Introduce el <strong>CPF/CNPJ</strong> y presiona <strong>Buscar</strong>. Si el cliente existe, verás sus datos y ventas.</p>
+
+        <h4>2.2 Registrar Venta</h4>
+        <p>Agrega productos con el botón <code>+</code>. Selecciona producto y cantidad. Puedes ingresar un <strong>abono inicial</strong>. Presiona <strong>Guardar Venta</strong>. Se actualiza automáticamente el stock.</p>
+
+        <h4>2.3 Ver Ventas y Pagar</h4>
+        <ul>
+            <li>Historial muestra ventas con estado <strong>Pagado</strong> o <strong>Pendiente</strong>.</li>
+            <li>Haz clic en <code>+</code> para ver productos vendidos.</li>
+            <li>Si hay deuda, haz clic en <strong>Pagar</strong> para abonar.</li>
+        </ul>
+    </div>
+
+    <div class="manual-section">
+        <h3>3. Inventario de Productos</h3>
+        <p>Visualiza todos los productos con su precio y stock. El stock se actualiza con cada venta.</p>
+
+        <h4>3.1 Agregar Producto</h4>
+        <ul>
+            <li>Si el producto <strong>ya existe</strong>, solo se suma stock. Precio no es obligatorio.</li>
+            <li>Si el producto <strong>es nuevo</strong>, completa nombre, precio y stock.</li>
+        </ul>
+
+        <h4>3.2 Editar o Eliminar</h4>
+        <ul>
+            <li>Usa el menú <code>...</code> junto al producto.</li>
+            <li>"Editar" permite modificar nombre, precio y stock.</li>
+            <li>"Borrar" elimina el producto permanentemente.</li>
+        </ul>
+    </div>
+
+    <div class="manual-section">
+        <h3>4. Cuentas por Cobrar</h3>
+        <p>Muestra todos los clientes con ventas pendientes. Haz clic en el nombre del cliente para ver detalles de las deudas.</p>
+
+        <ul>
+            <li>Visualiza <strong>total adeudado</strong> y detalle por venta.</li>
+            <li>Te permite dar seguimiento y contactar clientes fácilmente.</li>
+        </ul>
+    </div>
+
+    <div class="manual-section">
+        <h3>5. Preguntas Frecuentes (FAQ)</h3>
+        <ul>
+            <li><strong>¿Qué pasa si ingreso mal un dato?</strong> Puedes editar clientes o productos desde la hoja de cálculo.</li>
+            <li><strong>¿Se guarda automáticamente?</strong> Sí, cada acción actualiza las hojas correspondientes.</li>
+            <li><strong>¿Puedo usarlo en celular?</strong> Sí, es 100% responsive y funciona en dispositivos móviles.</li>
+        </ul>
+    </div>
+
+    <div class="manual-section">
+        <h3>Soporte Técnico</h3>
+        <p>¿Tienes preguntas o necesitas ayuda?</p>
+        <ul>
+            <li><strong>WhatsApp:</strong> <a href="https://wa.me/5549991839170" target="_blank">+55 49 99183-9170</a></li>
+            <li><strong>Email:</strong> <a href="mailto:aeinformatica7@gmail.com">aeinformatica7@gmail.com</a></li>
+        </ul>
+        <p>Con gusto te atenderé. 😊</p>
     </div>
 </div>
+
 
 <div class="container">
     <div class="tab-menu" id="tab-menu">
