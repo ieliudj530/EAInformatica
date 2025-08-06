@@ -18,7 +18,7 @@
             color: #f5f5f5; /* Texto claro */
             flex-direction: column;
             padding: 20px;
-            position: relative; /* Necesario para posicionar el botón del manual */
+            position: relative; /* Necessário para posicionar o botão do manual */
         }
 
         .container {
@@ -28,7 +28,6 @@
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            position: relative;
         }
 
         /* Estilos del menú de pestañas */
@@ -246,7 +245,7 @@
             margin-top: 10px;
         }
 
-        /* Nuevos estilos para la tabla de inventario */
+        /* Nuevos estilos para la tabla de inventario y cuentas */
         .inventory-table {
             width: 100%;
             border-collapse: collapse;
@@ -267,15 +266,6 @@
         }
         .inventory-table tr:hover {
             background-color: #333;
-        }
-        
-        .btn-edit-product {
-            background-color: transparent;
-            border: none;
-            cursor: pointer;
-            color: #ab47bc;
-            font-size: 1.2em;
-            margin-left: 10px;
         }
 
         /* Estilos para el botón del manual */
@@ -344,42 +334,6 @@
             border-radius: 8px;
             margin-top: 20px;
         }
-
-        /* Estilos del indicador de carga */
-        .loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            border-radius: 12px;
-            flex-direction: column;
-            text-align: center;
-            display: none;
-        }
-        .loading-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #ab47bc;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .loading-text {
-            margin-top: 15px;
-            font-size: 1.2em;
-            color: #ab47bc;
-        }
-
     </style>
 </head>
 <body>
@@ -408,7 +362,7 @@
         <h3>2. Pestaña "Buscar Cliente & Ventas"</h3>
         <p>Esta es la sección central del sistema. Te permite encontrar un cliente, ver su historial de ventas, registrar una nueva venta y registrar pagos.</p>
         <h4>2.1. Buscar Cliente</h4>
-        <p>En el campo de búsqueda, introduce el <strong>CPF/CNPJ</strong> del cliente y haz clic en <strong>"Buscar"</strong>. Si el cliente existe, sus datos aparecerán debajo, junto con su historial de ventas y la opción para registrar una nueva. Se ha corregido el error de búsqueda para que, incluso si no se encuentra al cliente, el sistema no falle.</p>
+        <p>En el campo de búsqueda, introduce el <strong>CPF/CNPJ</strong> del cliente y haz clic en <strong>"Buscar"</strong>. Si el cliente existe, sus datos aparecerán debajo, junto con su historial de ventas y la opción para registrar una nueva.</p>
         <h4>2.2. Registrar Nueva Venta</h4>
         <p>Después de buscar un cliente, usa este formulario para añadir una nueva venta a su historial.</p>
         <ul>
@@ -428,23 +382,16 @@
     <div class="manual-section">
         <h3>3. Pestaña "Inventario"</h3>
         <p>Esta sección te permite gestionar tu inventario de productos. En la tabla superior puedes ver todos los productos disponibles, sus precios y el stock actual. El stock se actualiza automáticamente cada vez que se registra una venta.</p>
-        <h4>3.1. Agregar Nuevo Producto</h4>
-        <p>Usa este formulario para añadir nuevos productos al inventario. El sistema le asignará un ID y el precio y stock inicial que indiques.</p>
-        <h4>3.2. Editar Producto Existente</h4>
-        <p>Haz clic en el ícono de lápiz (✏️) en la tabla de inventario para abrir el formulario de edición. Podrás corregir el nombre y el precio. El campo de stock ahora te permite establecer la **cantidad total de stock actualizada**, no una cantidad a añadir. Por ejemplo, si un producto tiene 10 unidades y quieres que tenga 15, simplemente escribe "15".</p>
-    </div>
-
-    <div class="manual-section">
-        <h3>4. Pestaña "Cuentas por Cobrar"</h3>
-        <p>Esta es una nueva sección que te permite ver de forma centralizada todas las ventas con pagos pendientes de todos tus clientes. Para cada venta, se muestra la información del cliente y la deuda. Haz clic en el botón verde <strong>"Pagar"</strong> para registrar un abono a la deuda, lo que actualizará el estado de la venta.</p>
+        <h4>3.1. Agregar o Actualizar Productos</h4>
+        <p>Usa este formulario para añadir nuevos productos o actualizar el stock de los existentes.</p>
+        <ul>
+            <li><strong>Si el nombre del producto YA existe</strong> en la lista, el sistema le sumará la cantidad que especifiques al stock actual. El campo de precio no es necesario.</li>
+            <li><strong>Si el nombre del producto NO existe</strong>, se creará un nuevo producto con el precio y el stock inicial que indiques. En este caso, el campo de precio es obligatorio.</li>
+        </ul>
     </div>
 </div>
 
 <div class="container">
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="loading-spinner"></div>
-        <div id="loading-text" class="loading-text">Cargando...</div>
-    </div>
     <div class="tab-menu" id="tab-menu">
         <button class="tab-button active" id="tab-client" onclick="openTab('clientTab', this)">Registrar Cliente</button>
         <button class="tab-button" id="tab-search" onclick="openTab('searchTab', this)">Buscar Cliente & Ventas</button>
@@ -510,26 +457,24 @@
             </div>
             
             <div class="inventory-form-section">
-                <h3 id="product-form-title" style="color: #8e24aa;">Agregar Nuevo Producto</h3>
                 <form id="addProductForm">
-                    <input type="hidden" id="edit-product-id" name="ID_Producto">
-                    <input type="hidden" name="action" value="addProduct">
+                    <h3 style="color: #8e24aa;">Agregar o Actualizar Producto</h3>
                     
                     <div class="form-group">
                         <label for="product-name">Nombre del Producto</label>
                         <input type="text" id="product-name" name="Nombre_del_producto" required>
                     </div>
 
-                    <div class="form-group" id="product-price-group">
-                        <label for="product-price">Precio</label>
-                        <input type="number" id="product-price" name="Precio" step="0.01" min="0" required>
+                    <div class="form-group">
+                        <label for="product-price">Precio (Solo si es un producto nuevo)</label>
+                        <input type="number" id="product-price" name="Precio" step="0.01" min="0">
                     </div>
 
                     <div class="form-group">
-                        <label id="stock-label" for="product-stock">Stock Inicial</label>
+                        <label for="product-stock">Stock a añadir</label>
                         <input type="number" id="product-stock" name="Stock" min="0" required>
                     </div>
-                    <button type="submit" class="btn-submit" id="product-form-button">Guardar Producto</button>
+                    <button type="submit" class="btn-submit">Guardar Cambios</button>
                     <p id="add-product-message" class="form-message"></p>
                 </form>
             </div>
@@ -555,14 +500,12 @@
     async function loadApp() {
         try {
             openTab('clientTab', document.getElementById('tab-client'));
-            showLoading('Cargando datos iniciales...');
+            
             await fetchProducts();
-            hideLoading();
             
         } catch (error) {
             console.error("Error al cargar la aplicación:", error);
             alert("Hubo un problema al cargar la aplicación. Por favor, recarga la página. Mensaje: " + error.message);
-            hideLoading();
         }
     }
 
@@ -593,23 +536,21 @@
         }
         if (tabName === 'inventoryTab') {
             loadInventory();
-        }
-        if (tabName === 'debtTab') {
+        } else if (tabName === 'debtTab') {
             loadPendingSales();
         }
     }
 
     async function loadInventory() {
         const inventoryList = document.getElementById('inventory-list');
+        
         inventoryList.innerHTML = '<p>Cargando inventario...</p>';
-        showLoading('Cargando inventario...');
         
         await fetchProducts();
-        resetAddProductForm(); // Asegura que el formulario esté en modo "agregar"
 
         if (allProducts.length > 0) {
             let html = '<table class="inventory-table">';
-            html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th><th></th></tr></thead>';
+            html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th></tr></thead>';
             html += '<tbody>';
             allProducts.forEach(product => {
                 html += `<tr>
@@ -617,7 +558,6 @@
                            <td>${product['Nombre_del_producto']}</td>
                            <td>R$ ${product.Precio.toFixed(2)}</td>
                            <td>${product.Stock}</td>
-                           <td><button class="btn-edit-product" onclick="editProduct(${product['ID_Producto']})">✏️</button></td>
                          </tr>`;
             });
             html += '</tbody></table>';
@@ -625,30 +565,35 @@
         } else {
             inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
         }
-        hideLoading();
     }
 
-    function editProduct(productId) {
-        const product = allProducts.find(p => p['ID_Producto'] === productId);
-        if (product) {
-            document.getElementById('product-form-title').textContent = `Editar Producto #${productId}`;
-            document.getElementById('edit-product-id').value = productId;
-            document.getElementById('addProductForm').querySelector('input[name="action"]').value = "updateProduct";
-            document.getElementById('product-name').value = product['Nombre_del_producto'];
-            document.getElementById('product-price').value = product.Precio;
-            document.getElementById('product-stock').value = product.Stock;
-            document.getElementById('stock-label').textContent = 'Stock total actualizado';
-            document.getElementById('product-form-button').textContent = "Actualizar Producto";
+    async function loadPendingSales() {
+        const debtList = document.getElementById('debt-list');
+        debtList.innerHTML = '<p>Cargando cuentas pendientes...</p>';
+        try {
+            const response = await fetch(scriptURL + '?action=getPendingSales');
+            const pendingSales = await response.json();
+            if (pendingSales.length > 0) {
+                let html = '<table class="inventory-table">';
+                html += '<thead><tr><th>ID Venta</th><th>Cliente</th><th>Fecha</th><th>Deuda Restante</th></tr></thead>';
+                html += '<tbody>';
+                pendingSales.forEach(sale => {
+                    html += `<tr>
+                                <td>${sale.id}</td>
+                                <td>${sale.nombreCliente}</td>
+                                <td>${new Date(sale.fecha).toLocaleDateString()}</td>
+                                <td>R$ ${sale.deudaRestante.toFixed(2)}</td>
+                              </tr>`;
+                });
+                html += '</tbody></table>';
+                debtList.innerHTML = html;
+            } else {
+                debtList.innerHTML = '<p>No hay cuentas pendientes en este momento.</p>';
+            }
+        } catch (error) {
+            console.error("Error al cargar las cuentas pendientes:", error);
+            debtList.innerHTML = '<p>Error al cargar las cuentas pendientes. Asegúrate de que las columnas en tu hoja "Ventas" están escritas correctamente.</p>';
         }
-    }
-
-    function resetAddProductForm() {
-        document.getElementById('product-form-title').textContent = 'Agregar Nuevo Producto';
-        document.getElementById('edit-product-id').value = '';
-        document.getElementById('addProductForm').querySelector('input[name="action"]').value = "addProduct";
-        document.getElementById('addProductForm').reset();
-        document.getElementById('stock-label').textContent = 'Stock Inicial';
-        document.getElementById('product-form-button').textContent = "Guardar Producto";
     }
 
     if (document.getElementById('customerForm')) {
@@ -656,9 +601,8 @@
       const customerMessage = document.getElementById('form-message');
       customerForm.addEventListener('submit', async (e) => {
           e.preventDefault();
-          customerMessage.textContent = '';
+          customerMessage.textContent = 'Enviando...';
           customerMessage.className = 'form-message';
-          showLoading('Registrando cliente...');
           try {
               const formData = new FormData(customerForm);
               const response = await fetch(scriptURL, { method: 'POST', body: formData });
@@ -679,8 +623,6 @@
           } catch (error) {
               customerMessage.textContent = 'Hubo un problema de conexión.';
               customerMessage.className = 'form-message error';
-          } finally {
-              hideLoading();
           }
       });
     }
@@ -692,10 +634,9 @@
     searchForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         resultsContainer.innerHTML = '';
-        searchMessage.textContent = '';
+        searchMessage.textContent = 'Buscando...';
         searchMessage.className = 'form-message';
         const searchCpfCnpj = document.getElementById('search-cpf').value;
-        showLoading('Buscando cliente...');
 
         try {
             const url = scriptURL + '?action=search&CPF/CNPJ=' + searchCpfCnpj;
@@ -737,7 +678,7 @@
                     <p><span class="result-label">Dirección:</span> ${data.Direccion || 'N/A'}</p>
                     <p><span class="result-label">Fecha de Registro:</span> ${new Date(data.Fecha).toLocaleDateString()}</p>
                     <hr>
-                    <p class="total-debt-info"><strong>Deuda Total Pendiente: R$ ${data.totalDebt.toFixed(2)}</strong></p>
+                    <p class="total-debt-info"><strong>Deuda Total Pendiente: R$ ${data.totalDebt}</strong></p>
                     
                     <div style="margin-top: 20px;">
                         <h3 style="color: #8e24aa;">Registrar Nueva Venta para ${data.Nome}</h3>
@@ -773,9 +714,8 @@
                 const saleMessage = document.getElementById('sale-message');
                 saleForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    saleMessage.textContent = '';
+                    saleMessage.textContent = 'Calculando y enviando...';
                     saleMessage.className = 'form-message';
-                    showLoading('Registrando venta...');
                     
                     let total = 0;
                     const finalProducts = [];
@@ -817,8 +757,6 @@
                     } catch (error) {
                         saleMessage.textContent = 'Hubo un problema de conexión.';
                         saleMessage.className = 'form-message error';
-                    } finally {
-                        hideLoading();
                     }
                 });
                 
@@ -829,13 +767,13 @@
         } catch (error) {
             searchMessage.textContent = 'Hubo un problema en la búsqueda: ' + error.message;
             searchMessage.className = 'form-message error';
-        } finally {
-            hideLoading();
         }
     });
     
     async function handlePayment(saleId, paymentAmount) {
-        showLoading('Registrando pago...');
+        const paymentMessage = document.getElementById(`payment-message-${saleId}`);
+        paymentMessage.textContent = 'Registrando pago...';
+        paymentMessage.className = 'form-message';
         try {
             const formData = new FormData();
             formData.append('action', 'addPayment');
@@ -846,23 +784,20 @@
             const resultText = await response.text();
             if (response.ok) {
                 if (resultText.includes("Error")) {
-                    alert(resultText);
+                    paymentMessage.textContent = resultText;
+                    paymentMessage.className = 'form-message error';
                 } else {
-                    alert('¡Pago registrado con éxito!');
-                    if (document.getElementById('tab-search').classList.contains('active')) {
-                        searchForm.dispatchEvent(new Event('submit'));
-                    }
-                    if (document.getElementById('tab-debt').classList.contains('active')) {
-                        loadPendingSales();
-                    }
+                    paymentMessage.textContent = '¡Pago registrado con éxito!';
+                    paymentMessage.className = 'form-message success';
+                    searchForm.dispatchEvent(new Event('submit'));
                 }
             } else {
-                alert('Error al registrar el pago.');
+                paymentMessage.textContent = 'Error al registrar el pago.';
+                paymentMessage.className = 'form-message error';
             }
         } catch (error) {
-            alert('Hubo un problema de conexión.');
-        } finally {
-            hideLoading();
+            paymentMessage.textContent = 'Hubo un problema de conexión.';
+            paymentMessage.className = 'form-message error';
         }
     }
 
@@ -894,6 +829,7 @@
                 <input type="number" id="payment-amount-${saleId}" step="0.01" min="0.01" max="${currentDebt}" required>
             </div>
             <button type="submit" class="btn-submit">Registrar Abono</button>
+            <p id="payment-message-${saleId}" class="form-message"></p>
         `;
 
         const saleItem = document.querySelector(`.sale-item .btn-pay[onclick*="${saleId}"]`).closest('.sale-item');
@@ -999,33 +935,31 @@
     if (addProductForm) {
       addProductForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        addProductMessage.textContent = '';
+        addProductMessage.textContent = 'Enviando...';
         addProductMessage.className = 'form-message';
-        showLoading('Guardando producto...');
         
-        const action = e.target.querySelector('input[name="action"]').value;
         const productName = document.getElementById('product-name').value;
         const productPrice = document.getElementById('product-price').value;
         const productStock = document.getElementById('product-stock').value;
-        const productId = document.getElementById('edit-product-id').value;
 
         if (!productName.trim()) {
             addProductMessage.textContent = 'El nombre del producto es obligatorio.';
             addProductMessage.className = 'form-message error';
-            hideLoading();
+            return;
+        }
+        if (!productStock || parseInt(productStock) <= 0) {
+            addProductMessage.textContent = 'La cantidad a añadir debe ser un número positivo.';
+            addProductMessage.className = 'form-message error';
             return;
         }
 
         const formData = new FormData();
-        formData.append('action', action);
+        formData.append('action', 'addProduct');
         formData.append('Nombre_del_producto', productName);
         formData.append('Precio', productPrice);
         formData.append('Stock', productStock);
-
-        if (action === 'updateProduct') {
-            formData.append('ID_Producto', productId);
-        }
         
+
         try {
           const response = await fetch(scriptURL, { method: 'POST', body: formData });
           const resultText = await response.text();
@@ -1036,7 +970,7 @@
             } else {
               addProductMessage.textContent = '¡Operación exitosa!';
               addProductMessage.className = 'form-message success';
-              resetAddProductForm();
+              addProductForm.reset();
               loadInventory();
             }
           } else {
@@ -1046,47 +980,8 @@
         } catch (error) {
           addProductMessage.textContent = 'Hubo un problema de conexión.';
           addProductMessage.className = 'form-message error';
-        } finally {
-            hideLoading();
         }
       });
-    }
-
-    async function loadPendingSales() {
-        const debtList = document.getElementById('debt-list');
-        debtList.innerHTML = '<p>Cargando cuentas pendientes...</p>';
-        showLoading('Cargando cuentas pendientes...');
-        
-        try {
-            const url = scriptURL + '?action=getPendingSales';
-            const response = await fetch(url);
-            const data = await response.json();
-
-            if (data.length > 0) {
-                let html = '<h4>Ventas con Deuda Pendiente:</h4><ul>';
-                data.forEach(sale => {
-                    html += `
-                        <li class="sale-item pending">
-                            <p><span class="result-label">Cliente:</span> ${sale.nombreCliente}</p>
-                            <p><span class="result-label">ID Venta:</span> ${sale.id} | 
-                            <span class="result-label">Monto Total:</span> R$ ${sale.montoTotal.toFixed(2)} | 
-                            <span class="result-label">Deuda:</span> R$ ${sale.deudaRestante.toFixed(2)}</p>
-                            <p><span class="result-label">Fecha:</span> ${new Date(sale.fecha).toLocaleDateString()}
-                            <button class="btn-pay" onclick="showPaymentForm(${sale.id}, ${sale.deudaRestante})">Pagar</button></p>
-                        </li>
-                    `;
-                });
-                html += '</ul>';
-                debtList.innerHTML = html;
-            } else {
-                debtList.innerHTML = '<p>No hay ventas con deuda pendiente.</p>';
-            }
-
-        } catch (error) {
-            debtList.innerHTML = '<p>Error al cargar las cuentas pendientes.</p>';
-        } finally {
-            hideLoading();
-        }
     }
 
     function toggleManual() {
@@ -1096,15 +991,6 @@
         } else {
             manualContent.style.display = 'block';
         }
-    }
-
-    function showLoading(message = 'Cargando...') {
-        document.getElementById('loading-text').textContent = message;
-        document.getElementById('loading-overlay').style.display = 'flex';
-    }
-
-    function hideLoading() {
-        document.getElementById('loading-overlay').style.display = 'none';
     }
     
     document.addEventListener('DOMContentLoaded', loadApp);
