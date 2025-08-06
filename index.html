@@ -408,7 +408,7 @@
         <h3>2. Pestaña "Buscar Cliente & Ventas"</h3>
         <p>Esta es la sección central del sistema. Te permite encontrar un cliente, ver su historial de ventas, registrar una nueva venta y registrar pagos.</p>
         <h4>2.1. Buscar Cliente</h4>
-        <p>En el campo de búsqueda, introduce el <strong>CPF/CNPJ</strong> del cliente y haz clic en <strong>"Buscar"</strong>. Si el cliente existe, sus datos aparecerán debajo, junto con su historial de ventas y la opción para registrar una nueva.</p>
+        <p>En el campo de búsqueda, introduce el <strong>CPF/CNPJ</strong> del cliente y haz clic en <strong>"Buscar"</strong>. Si el cliente existe, sus datos aparecerán debajo, junto con su historial de ventas y la opción para registrar una nueva. Se ha corregido el error de búsqueda para que, incluso si no se encuentra al cliente, el sistema no falle.</p>
         <h4>2.2. Registrar Nueva Venta</h4>
         <p>Después de buscar un cliente, usa este formulario para añadir una nueva venta a su historial.</p>
         <ul>
@@ -431,12 +431,12 @@
         <h4>3.1. Agregar Nuevo Producto</h4>
         <p>Usa este formulario para añadir nuevos productos al inventario. El sistema le asignará un ID y el precio y stock inicial que indiques.</p>
         <h4>3.2. Editar Producto Existente</h4>
-        <p>Haz clic en el ícono de lápiz (✏️) en la tabla de inventario para abrir el formulario de edición. Podrás corregir el nombre, ajustar el precio o sumar stock al producto seleccionado.</p>
+        <p>Haz clic en el ícono de lápiz (✏️) en la tabla de inventario para abrir el formulario de edición. Podrás corregir el nombre y el precio. El campo de stock ahora te permite establecer la **cantidad total de stock actualizada**, no una cantidad a añadir. Por ejemplo, si un producto tiene 10 unidades y quieres que tenga 15, simplemente escribe "15".</p>
     </div>
 
     <div class="manual-section">
         <h3>4. Pestaña "Cuentas por Cobrar"</h3>
-        <p>Aquí puedes visualizar todas las ventas con pagos pendientes. Para cada venta, se muestra la información del cliente y la deuda. Haz clic en el botón verde <strong>"Pagar"</strong> para registrar un abono a la deuda.
+        <p>Esta es una nueva sección que te permite ver de forma centralizada todas las ventas con pagos pendientes de todos tus clientes. Para cada venta, se muestra la información del cliente y la deuda. Haz clic en el botón verde <strong>"Pagar"</strong> para registrar un abono a la deuda, lo que actualizará el estado de la venta.</p>
     </div>
 </div>
 
@@ -636,8 +636,8 @@
             document.getElementById('addProductForm').querySelector('input[name="action"]').value = "updateProduct";
             document.getElementById('product-name').value = product['Nombre_del_producto'];
             document.getElementById('product-price').value = product.Precio;
-            document.getElementById('product-stock').value = 0;
-            document.getElementById('stock-label').textContent = 'Stock a añadir';
+            document.getElementById('product-stock').value = product.Stock;
+            document.getElementById('stock-label').textContent = 'Stock total actualizado';
             document.getElementById('product-form-button').textContent = "Actualizar Producto";
         }
     }
@@ -1020,12 +1020,10 @@
         formData.append('action', action);
         formData.append('Nombre_del_producto', productName);
         formData.append('Precio', productPrice);
+        formData.append('Stock', productStock);
 
         if (action === 'updateProduct') {
             formData.append('ID_Producto', productId);
-            formData.append('Stock_a_añadir', productStock);
-        } else {
-            formData.append('Stock', productStock);
         }
         
         try {
