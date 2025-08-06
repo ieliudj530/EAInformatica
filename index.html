@@ -79,6 +79,18 @@
             font-size: 2em;
         }
 
+        h3 {
+            color: #8e24aa;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        h4 {
+            color: #ab47bc;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
         .form-group {
             margin-bottom: 20px;
             text-align: left;
@@ -251,6 +263,35 @@
         .inventory-table tr:hover {
             background-color: #333;
         }
+
+        /* Estilos para el manual */
+        .manual-section {
+            margin-bottom: 30px;
+        }
+        .manual-section h4 {
+            color: #ab47bc;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .manual-section p, .manual-section ul {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #ccc;
+        }
+        .manual-section ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+        .manual-section ul li {
+            margin-bottom: 5px;
+        }
+        .manual-section code {
+            background-color: #333;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -260,6 +301,7 @@
         <button class="tab-button active" id="tab-client" onclick="openTab('clientTab', this)">Registrar Cliente</button>
         <button class="tab-button" id="tab-search" onclick="openTab('searchTab', this)">Buscar Cliente & Ventas</button>
         <button class="tab-button" id="tab-inventory" onclick="openTab('inventoryTab', this)">Inventario</button>
+        <button class="tab-button" id="tab-manual" onclick="openTab('manualTab', this)">Manual de Usuario</button>
     </div>
 
     <div id="clientTab" class="tab-content active">
@@ -330,6 +372,53 @@
                     <button type="submit" class="btn-submit">Agregar Producto</button>
                     <p id="add-product-message" class="form-message"></p>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="manualTab" class="tab-content">
+        <div class="form-container">
+            <h2>Manual de Usuario</h2>
+            <p>Bienvenido al sistema de gestión de clientes, ventas e inventario. Este manual te guiará a través de las funciones principales de la aplicación.</p>
+
+            <div class="manual-section">
+                <h3>1. Pestaña "Registrar Cliente"</h3>
+                <p>Usa esta sección para añadir nuevos clientes a tu base de datos. Completa todos los campos del formulario y haz clic en el botón.</p>
+                <ul>
+                    <li><strong>Nombre:</strong> Nombre completo del cliente.</li>
+                    <li><strong>CPF/CNPJ:</strong> Número de identificación del cliente (sin puntos ni guiones).</li>
+                    <li><strong>Email:</strong> Correo electrónico del cliente.</li>
+                    <li><strong>Fecha:</strong> Fecha de registro del cliente.</li>
+                </ul>
+                <p>Al hacer clic en <strong>"Guardar Cliente"</strong>, la información se guardará en la hoja de cálculo <code>Clientes</code>.</p>
+            </div>
+
+            <div class="manual-section">
+                <h3>2. Pestaña "Buscar Cliente & Ventas"</h3>
+                <p>Esta es la sección central del sistema. Te permite encontrar un cliente, ver su historial de ventas, registrar una nueva venta y registrar pagos.</p>
+                <h4>2.1. Buscar Cliente</h4>
+                <p>En el campo de búsqueda, introduce el <strong>CPF/CNPJ</strong> del cliente y haz clic en <strong>"Buscar"</strong>. Si el cliente existe, sus datos aparecerán debajo, junto con su historial de ventas y la opción para registrar una nueva.</p>
+                <h4>2.2. Registrar Nueva Venta</h4>
+                <p>Después de buscar un cliente, usa este formulario para añadir una nueva venta a su historial.</p>
+                <ul>
+                    <li><strong>Fecha de Venta:</strong> Selecciona la fecha en la que se realizó la venta.</li>
+                    <li><strong>Añadir Productos:</strong> Usa el botón `+` para añadir una línea de producto. Selecciona un producto del inventario y la cantidad. El botón `-` elimina la línea.</li>
+                    <li><strong>Abono Inicial (opcional):</strong> Si el cliente paga una parte del total, ingresa el monto aquí.</li>
+                </ul>
+                <p>Al hacer clic en <strong>"Guardar Venta"</strong>, la venta se registrará en la hoja <code>Ventas</code> y se actualizará el stock en la hoja <code>Productos</code>.</p>
+                <h4>2.3. Historial de Ventas</h4>
+                <p>Aquí verás todas las ventas registradas para el cliente. Cada venta muestra su estado (<strong>"Pagado"</strong> o <strong>"Pendiente"</strong>) y la deuda restante.</p>
+                <ul>
+                    <li>El botón `+` junto a cada venta muestra la lista de productos que se compraron.</li>
+                    <li>Si una venta tiene deuda, aparecerá un botón verde <strong>"Pagar"</strong>. Haz clic en él para registrar un abono a esa deuda.</li>
+                </ul>
+            </div>
+
+            <div class="manual-section">
+                <h3>3. Pestaña "Inventario"</h3>
+                <p>Esta sección te permite gestionar tu inventario de productos. En la tabla superior puedes ver todos los productos disponibles, sus precios y el stock actual. El stock se actualiza automáticamente cada vez que se registra una venta.</p>
+                <h4>3.1. Agregar Nuevo Producto</h4>
+                <p>Utiliza el formulario en la parte inferior para añadir un nuevo producto al inventario. Completa los campos y haz clic en <strong>"Agregar Producto"</strong>.</p>
             </div>
         </div>
     </div>
@@ -726,7 +815,7 @@
         });
     }
 
-       function toggleSaleDetails(button) {
+    function toggleSaleDetails(button) {
         const saleItem = button.closest('.sale-item');
         if (saleItem) {
             const details = saleItem.querySelector('.sale-details');
