@@ -325,6 +325,7 @@
 </div>
 
 <script>
+    // **AQUÍ DEBES PEGAR LA URL DE TU ÚLTIMA IMPLEMENTACIÓN**
     const scriptURL = 'https://script.google.com/macros/s/AKfycbybxe6Iu6rlXzk6_rQLkirk2Vi1couqQ8nFhFh8nSmJ_4bWZarpn5WxVDTLAbKLcMLL/exec'; 
 
     let allProducts = [];
@@ -334,6 +335,7 @@
     async function loadApp() {
         try {
             const roleResponse = await fetch(scriptURL + '?action=getRole');
+            if (!roleResponse.ok) throw new Error('Error al obtener el rol del usuario.');
             const roleData = await roleResponse.json();
             userRole = roleData.role;
 
@@ -365,18 +367,16 @@
                 
                 document.getElementById('searchTab').style.display = 'block';
                 tabSearch.classList.add('active');
-
-                // Si el usuario es un cliente, ejecuta la búsqueda automáticamente
                 searchForm.dispatchEvent(new Event('submit'));
             }
-
-            // Cargar productos para el registro de ventas y la tabla de inventario
+            
             const productsResponse = await fetch(scriptURL + '?action=getProducts');
+            if (!productsResponse.ok) throw new Error('Error al obtener los productos.');
             allProducts = await productsResponse.json();
             
         } catch (error) {
             console.error("Error al cargar la aplicación:", error);
-            alert("Hubo un problema al cargar la aplicación. Por favor, recarga la página.");
+            alert("Hubo un problema al cargar la aplicación. Por favor, recarga la página. Mensaje: " + error.message);
         }
     }
     
@@ -402,6 +402,7 @@
         inventoryList.innerHTML = '<p>Cargando inventario...</p>';
         try {
             const response = await fetch(scriptURL + '?action=getProducts');
+            if (!response.ok) throw new Error('Error al obtener los productos.');
             allProducts = await response.json();
             
             if (allProducts.length > 0) {
@@ -422,12 +423,11 @@
                 inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
             }
         } catch (error) {
-            inventoryList.innerHTML = '<p class="form-message error">Error al cargar el inventario.</p>';
+            inventoryList.innerHTML = '<p class="form-message error">Error al cargar el inventario: ' + error.message + '</p>';
         }
     }
 
-    // Lógica para el formulario de registro de cliente (solo admins)
-    if (userRole === 'admin') {
+    if (document.getElementById('customerForm')) {
       const customerForm = document.getElementById('customerForm');
       const customerMessage = document.getElementById('form-message');
       customerForm.addEventListener('submit', async (e) => {
@@ -458,7 +458,6 @@
       });
     }
 
-    // Lógica para el formulario de búsqueda (para admins y clientes)
     const searchForm = document.getElementById('searchForm');
     const searchMessage = document.getElementById('search-message');
     const resultsContainer = document.getElementById('results-container');
@@ -468,13 +467,15 @@
         resultsContainer.innerHTML = '';
         searchMessage.textContent = 'Buscando...';
         searchMessage.className = 'form-message';
-        const searchCpfCnpj = document.getElementById('search-cpf').value;
+        const searchCpfCnpj = document.getElementById('search-cpf') ? document.getElementById('search-cpf').value : null;
+
         try {
             const url = userRole === 'admin' ? 
                 scriptURL + '?action=search&CPF/CNPJ=' + searchCpfCnpj : 
-                scriptURL + '?action=search'; // El Apps Script usará el CPF del usuario autenticado
+                scriptURL + '?action=search';
             const response = await fetch(url);
             const data = await response.json();
+            
             if (data && data.Nome) {
                 searchMessage.textContent = 'Cliente encontrado:';
                 searchMessage.className = 'form-message success';
@@ -598,7 +599,7 @@
                 searchMessage.className = 'form-message error';
             }
         } catch (error) {
-            searchMessage.textContent = 'Hubo un problema en la búsqueda.';
+            searchMessage.textContent = 'Hubo un problema en la búsqueda: ' + error.message;
             searchMessage.className = 'form-message error';
         }
     });
@@ -758,7 +759,6 @@
         details.style.display = details.style.display === 'none' ? 'block' : 'none';
     }
 
-    // Lógica para el formulario de agregar producto (solo admins)
     const addProductForm = document.getElementById('addProductForm');
     const addProductMessage = document.getElementById('add-product-message');
     if (addProductForm) {
@@ -778,7 +778,7 @@
               addProductMessage.textContent = '¡Producto agregado con éxito!';
               addProductMessage.className = 'form-message success';
               addProductForm.reset();
-              loadInventory(); // Recargar el inventario para ver el nuevo producto
+              loadInventory();
             }
           } else {
             addProductMessage.textContent = 'Error al agregar el producto.';
@@ -791,7 +791,6 @@
       });
     }
     
-    // Ejecutar al cargar la página
     document.addEventListener('DOMContentLoaded', loadApp);
 
 </script>
