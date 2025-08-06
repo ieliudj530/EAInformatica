@@ -726,9 +726,14 @@
         });
     }
 
-    function toggleSaleDetails(button) {
-        const details = button.nextElementSibling.nextElementSibling;
-        details.style.display = details.style.display === 'none' ? 'block' : 'none';
+       function toggleSaleDetails(button) {
+        const saleItem = button.closest('.sale-item');
+        if (saleItem) {
+            const details = saleItem.querySelector('.sale-details');
+            if (details) {
+                details.style.display = details.style.display === 'none' ? 'block' : 'none';
+            }
+        }
     }
 
     const addProductForm = document.getElementById('addProductForm');
