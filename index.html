@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Clientes y Compras</title>
+    <title>Gestión de Empresas EAInformática</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
@@ -16,19 +16,54 @@
             min-height: 100vh;
             margin: 0;
             color: #333;
-            flex-direction: column; 
+            flex-direction: column;
             padding: 20px;
         }
 
-        .form-container {
+        .container {
+            width: 100%;
+            max-width: 900px;
             background-color: #fff;
-            padding: 40px;
+            padding: 20px;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 500px;
+        }
+
+        /* Estilos del menú de pestañas */
+        .tab-menu {
+            display: flex;
+            justify-content: space-around;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 15px 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #555;
+            transition: color 0.3s, border-bottom 0.3s;
+        }
+
+        .tab-button.active {
+            color: #6a1b9a;
+            border-bottom: 3px solid #6a1b9a;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-container {
+            padding: 20px 0;
             text-align: center;
-            margin-bottom: 25px; 
         }
 
         h2 {
@@ -51,7 +86,9 @@
 
         input[type="text"],
         input[type="email"],
-        input[type="date"] {
+        input[type="date"],
+        input[type="number"],
+        select {
             width: 100%;
             padding: 12px;
             border: 1px solid #ccc;
@@ -63,7 +100,9 @@
 
         input[type="text"]:focus,
         input[type="email"]:focus,
-        input[type="date"]:focus {
+        input[type="date"]:focus,
+        input[type="number"]:focus,
+        select:focus {
             border-color: #6a1b9a;
             outline: none;
         }
@@ -79,13 +118,14 @@
             cursor: pointer;
             transition: background-color 0.3s, transform 0.2s;
             width: 100%;
+            margin-top: 10px;
         }
 
         .btn-submit:hover {
             background-color: #ab47bc; /* Morado un poco más claro */
             transform: translateY(-2px);
         }
-
+        
         .form-message {
             margin-top: 20px;
             font-weight: 600;
@@ -116,170 +156,394 @@
             font-weight: bold;
             color: #6a1b9a;
         }
+
+        /* Estilos para el detalle de productos */
+        .product-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .product-item select, .product-item input[type="number"] {
+            margin-right: 10px;
+            width: auto;
+        }
+        .btn-add, .btn-remove {
+            background-color: #6a1b9a;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 35px;
+            height: 35px;
+            font-size: 1.2em;
+            margin-left: 5px;
+        }
+        .btn-remove {
+            background-color: #f44336;
+        }
+        .btn-add:hover, .btn-remove:hover {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
 
-<div class="form-container">
-    <h2>Registro de Clientes</h2>
-    <form id="customerForm">
-        <input type="hidden" name="action" value="addClient">
-        <div class="form-group">
-            <label for="Nome">Nombre</label>
-            <input type="text" id="Nome" name="Nome" required>
-        </div>
-        <div class="form-group">
-            <label for="CPF/CNPJ">CPF/CNPJ</label>
-            <input type="text" id="CPF/CNPJ" name="CPF/CNPJ" required>
-        </div>
-        <div class="form-group">
-            <label for="Email">Email</label>
-            <input type="email" id="Email" name="Email" required>
-        </div>
-        <div class="form-group">
-            <label for="Fecha">Fecha</label>
-            <input type="date" id="Fecha" name="Fecha" required>
-        </div>
-        <button type="submit" class="btn-submit">Guardar Cliente</button>
-        <p id="form-message" class="form-message"></p>
-    </form>
-</div>
+<div class="container">
+    <div class="tab-menu">
+        <button class="tab-button active" onclick="openTab('clientTab')">Registrar Cliente</button>
+        <button class="tab-button" onclick="openTab('searchTab')">Buscar Cliente & Ventas</button>
+        <button class="tab-button" onclick="openTab('inventoryTab')">Inventario</button>
+    </div>
 
-<div class="form-container">
-    <h2>Buscar Cliente</h2>
-    <form id="searchForm">
-        <div class="form-group">
-            <label for="search-cpf">Buscar por CPF/CNPJ</label>
-            <input type="text" id="search-cpf" name="CPF/CNPJ" required>
+    <div id="clientTab" class="tab-content active">
+        <div class="form-container">
+            <h2>Registro de Clientes</h2>
+            <form id="customerForm">
+                <input type="hidden" name="action" value="addClient">
+                <div class="form-group">
+                    <label for="Nome">Nombre</label>
+                    <input type="text" id="Nome" name="Nome" required>
+                </div>
+                <div class="form-group">
+                    <label for="CPF/CNPJ">CPF/CNPJ</label>
+                    <input type="text" id="CPF/CNPJ" name="CPF/CNPJ" required>
+                </div>
+                <div class="form-group">
+                    <label for="Email">Email</label>
+                    <input type="email" id="Email" name="Email" required>
+                </div>
+                <div class="form-group">
+                    <label for="Fecha">Fecha</label>
+                    <input type="date" id="Fecha" name="Fecha" required>
+                </div>
+                <button type="submit" class="btn-submit">Guardar Cliente</button>
+                <p id="form-message" class="form-message"></p>
+            </form>
         </div>
-        <button type="submit" class="btn-submit">Buscar</button>
-        <p id="search-message" class="form-message"></p>
-    </form>
-    <div id="results-container">
+    </div>
+
+    <div id="searchTab" class="tab-content">
+        <div class="form-container">
+            <h2>Buscar Cliente y Registrar Venta</h2>
+            <form id="searchForm">
+                <div class="form-group">
+                    <label for="search-cpf">Buscar por CPF/CNPJ</label>
+                    <input type="text" id="search-cpf" name="CPF/CNPJ" required>
+                </div>
+                <button type="submit" class="btn-submit">Buscar</button>
+                <p id="search-message" class="form-message"></p>
+            </form>
+            <div id="results-container"></div>
         </div>
+    </div>
+
+    <div id="inventoryTab" class="tab-content">
+        <div class="form-container">
+            <h2>Inventario de Productos</h2>
+            <div id="inventory-list">
+                <p>Cargando inventario...</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-    const customerForm = document.getElementById('customerForm');
-    const customerMessage = document.getElementById('form-message');
-    const searchForm = document.getElementById('searchForm');
-    const searchMessage = document.getElementById('search-message');
-    const resultsContainer = document.getElementById('results-container');
-    
-    // *¡IMPORTANTE!* Reemplaza esta URL con la que copiaste del Apps Script
     const scriptURL = 'https://script.google.com/macros/s/AKfycbybxe6Iu6rlXzk6_rQLkirk2Vi1couqQ8nFhFh8nSmJ_4bWZarpn5WxVDTLAbKLcMLL/exec'; 
 
-    // Lógica para el formulario de registro de clientes
+    let allProducts = [];
+    let salesProducts = [];
+
+    function openTab(tabName) {
+        var i, tabContent, tabButtons;
+        tabContent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabContent.length; i++) {
+            tabContent[i].style.display = "none";
+        }
+        tabButtons = document.getElementsByClassName("tab-button");
+        for (i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].className = tabButtons[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        event.currentTarget.className += " active";
+        if (tabName === 'inventoryTab') {
+            loadInventory();
+        }
+    }
+
+    async function loadInventory() {
+        const inventoryList = document.getElementById('inventory-list');
+        inventoryList.innerHTML = '<p>Cargando inventario...</p>';
+        try {
+            const response = await fetch(scriptURL + '?action=getProducts');
+            allProducts = await response.json();
+            
+            if (allProducts.length > 0) {
+                let html = '<ul>';
+                allProducts.forEach(product => {
+                    html += `<li><span class="result-label">ID:</span> ${product['ID_Producto']} - 
+                             <span class="result-label">Nombre:</span> ${product['Nombre_del_producto']} - 
+                             <span class="result-label">Precio:</span> R$ ${product.Precio} - 
+                             <span class="result-label">Stock:</span> ${product.Stock}</li>`;
+                });
+                html += '</ul>';
+                inventoryList.innerHTML = html;
+            } else {
+                inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
+            }
+        } catch (error) {
+            inventoryList.innerHTML = '<p class="form-message error">Error al cargar el inventario.</p>';
+        }
+    }
+
+    const customerForm = document.getElementById('customerForm');
+    const customerMessage = document.getElementById('form-message');
     customerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         customerMessage.textContent = 'Enviando...';
         customerMessage.className = 'form-message';
-
         try {
             const formData = new FormData(customerForm);
-            const response = await fetch(scriptURL, {
-                method: 'POST',
-                body: formData
-            });
-
+            const response = await fetch(scriptURL, { method: 'POST', body: formData });
+            const resultText = await response.text();
             if (response.ok) {
-                customerMessage.textContent = '¡Cliente registrado con éxito!';
-                customerMessage.className = 'form-message success';
-                customerForm.reset();
+                if (resultText.includes("Error")) {
+                    customerMessage.textContent = resultText;
+                    customerMessage.className = 'form-message error';
+                } else {
+                    customerMessage.textContent = '¡Cliente registrado con éxito!';
+                    customerMessage.className = 'form-message success';
+                    customerForm.reset();
+                }
             } else {
-                customerMessage.textContent = 'Error al registrar el cliente. Por favor, inténtalo de nuevo.';
+                customerMessage.textContent = 'Error al registrar el cliente.';
                 customerMessage.className = 'form-message error';
             }
         } catch (error) {
-            customerMessage.textContent = 'Hubo un problema de conexión. Revisa tu red.';
+            customerMessage.textContent = 'Hubo un problema de conexión.';
             customerMessage.className = 'form-message error';
         }
     });
 
-    // Lógica para el formulario de búsqueda (ACTUALIZADA)
+    const searchForm = document.getElementById('searchForm');
+    const searchMessage = document.getElementById('search-message');
+    const resultsContainer = document.getElementById('results-container');
+
     searchForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         resultsContainer.innerHTML = '';
         searchMessage.textContent = 'Buscando...';
         searchMessage.className = 'form-message';
-
         const searchCpfCnpj = document.getElementById('search-cpf').value;
-
         try {
             const response = await fetch(scriptURL + '?action=search&CPF/CNPJ=' + searchCpfCnpj);
             const data = await response.json();
-
             if (data && data.Nome) {
                 searchMessage.textContent = 'Cliente encontrado:';
                 searchMessage.className = 'form-message success';
+                
+                if (allProducts.length === 0) {
+                    const productsResponse = await fetch(scriptURL + '?action=getProducts');
+                    allProducts = await productsResponse.json();
+                }
+
+                let salesHtml = data.sales.length > 0
+                    ? `<h4>Historial de Ventas:</h4>
+                       <ul>
+                           ${data.sales.map(sale => `
+                               <li>
+                                   <span class="result-label">ID Venta:</span> ${sale.id} | 
+                                   <span class="result-label">Monto:</span> R$ ${sale.monto.toFixed(2)} | 
+                                   <span class="result-label">Fecha:</span> ${new Date(sale.fecha).toLocaleDateString()}
+                                   <button onclick="toggleSaleDetails(this)">+</button>
+                                   <div class="sale-details" style="display:none;">
+                                        <ul>
+                                            ${sale.productos.map(p => `<li>${p.nombre} (${p.cantidad} unidad/es)</li>`).join('')}
+                                        </ul>
+                                   </div>
+                               </li>
+                           `).join('')}
+                       </ul>`
+                    : `<p>Este cliente no tiene ventas registradas.</p>`;
+
                 resultsContainer.innerHTML = `
                     <p><span class="result-label">Nombre:</span> ${data.Nome}</p>
                     <p><span class="result-label">CPF/CNPJ:</span> ${data['CPF/CNPJ']}</p>
                     <p><span class="result-label">Email:</span> ${data.Email}</p>
-                    <p><span class="result-label">Fecha de Registro:</span> ${data.Fecha}</p>
+                    <p><span class="result-label">Fecha de Registro:</span> ${new Date(data.Fecha).toLocaleDateString()}</p>
                     <hr>
-                    <p><strong><span class="result-label">Valor total de compras:</span> R$ ${data.totalCompra}</strong></p>
+                    <p><strong><span class="result-label">Monto total de ventas:</span> R$ ${data.totalSales}</strong></p>
                     
                     <div style="margin-top: 20px;">
-                        <h3 style="color: #8e24aa;">Registrar Compra para ${data.Nome}</h3>
-                        <form id="purchaseForm">
-                            <input type="hidden" name="action" value="addPurchase">
+                        <h3 style="color: #8e24aa;">Registrar Venta para ${data.Nome}</h3>
+                        <form id="saleForm">
+                            <input type="hidden" name="action" value="addSale">
                             <input type="hidden" name="CPF/CNPJ" value="${data['CPF/CNPJ']}">
+                            <input type="hidden" id="productsJson" name="Productos">
+                            <input type="hidden" id="totalAmount" name="MontoTotal">
+                            
                             <div class="form-group">
-                                <label for="valor">Valor de la Compra</label>
-                                <input type="text" id="valor" name="Valor" required>
+                                <label for="sale-fecha">Fecha de Venta</label>
+                                <input type="date" id="sale-fecha" name="Fecha" required>
                             </div>
-                            <div class="form-group">
-                                <label for="purchase-fecha">Fecha de Compra</label>
-                                <input type="date" id="purchase-fecha" name="Fecha" required>
+
+                            <div id="products-list">
+                                </div>
+                            <div style="text-align: right;">
+                                <button type="button" onclick="addProductField()" class="btn-add">+</button>
                             </div>
-                            <button type="submit" class="btn-submit">Guardar Compra</button>
-                            <p id="purchase-message" class="form-message"></p>
+                            <br>
+                            <button type="submit" class="btn-submit">Guardar Venta</button>
+                            <p id="sale-message" class="form-message"></p>
                         </form>
                     </div>
+                    ${salesHtml}
                 `;
+                salesProducts = [];
+                addProductField();
 
-                // Aquí manejamos el nuevo formulario de compra dinámico
-                const purchaseForm = document.getElementById('purchaseForm');
-                const purchaseMessage = document.getElementById('purchase-message');
-
-                purchaseForm.addEventListener('submit', async (e) => {
+                const saleForm = document.getElementById('saleForm');
+                const saleMessage = document.getElementById('sale-message');
+                saleForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    purchaseMessage.textContent = 'Enviando...';
-                    purchaseMessage.className = 'form-message';
+                    saleMessage.textContent = 'Calculando y enviando...';
+                    saleMessage.className = 'form-message';
+                    
+                    let total = 0;
+                    const finalProducts = [];
+                    salesProducts.forEach(p => {
+                        const product = allProducts.find(prod => prod.ID_Producto == p.id);
+                        if (product) {
+                            total += product.Precio * p.cantidad;
+                            finalProducts.push({
+                                id: product.ID_Producto,
+                                nombre: product.Nombre_del_producto,
+                                cantidad: p.cantidad
+                            });
+                        }
+                    });
+
+                    document.getElementById('totalAmount').value = total;
+                    document.getElementById('productsJson').value = JSON.stringify(finalProducts);
 
                     try {
-                        const formData = new FormData(purchaseForm);
-                        const response = await fetch(scriptURL, {
-                            method: 'POST',
-                            body: formData
-                        });
-
+                        const formData = new FormData(saleForm);
+                        const response = await fetch(scriptURL, { method: 'POST', body: formData });
                         if (response.ok) {
-                            purchaseMessage.textContent = '¡Compra registrada con éxito!';
-                            purchaseMessage.className = 'form-message success';
-                            purchaseForm.reset();
+                            saleMessage.textContent = '¡Venta registrada con éxito!';
+                            saleMessage.className = 'form-message success';
+                            saleForm.reset();
+                            salesProducts = [];
+                            resultsContainer.innerHTML = '';
+                            searchForm.dispatchEvent(new Event('submit'));
                         } else {
-                            purchaseMessage.textContent = 'Error al registrar la compra. Por favor, inténtalo de nuevo.';
-                            purchaseMessage.className = 'form-message error';
+                            saleMessage.textContent = 'Error al registrar la venta.';
+                            saleMessage.className = 'form-message error';
                         }
                     } catch (error) {
-                        purchaseMessage.textContent = 'Hubo un problema de conexión. Revisa tu red.';
-                        purchaseMessage.className = 'form-message error';
+                        saleMessage.textContent = 'Hubo un problema de conexión.';
+                        saleMessage.className = 'form-message error';
                     }
                 });
-
 
             } else {
                 searchMessage.textContent = 'No se encontró ningún cliente con ese CPF/CNPJ.';
                 searchMessage.className = 'form-message error';
             }
         } catch (error) {
-            searchMessage.textContent = 'Hubo un problema en la búsqueda. Revisa tu red.';
+            searchMessage.textContent = 'Hubo un problema en la búsqueda.';
             searchMessage.className = 'form-message error';
         }
     });
-</script>
 
+    function addProductField() {
+        const productsListDiv = document.getElementById('products-list');
+        const index = salesProducts.length;
+
+        const productSelect = document.createElement('select');
+        productSelect.innerHTML = allProducts.map(p => 
+            `<option value="${p.ID_Producto}" data-price="${p.Precio}">${p.Nombre_del_producto}</option>`
+        ).join('');
+        productSelect.onchange = (e) => updateProduct(index, e.target.value, salesProducts[index].cantidad);
+
+        const quantityInput = document.createElement('input');
+        quantityInput.type = 'number';
+        quantityInput.value = 1;
+        quantityInput.min = 1;
+        quantityInput.onchange = (e) => updateProduct(index, salesProducts[index].id, parseInt(e.target.value));
+        quantityInput.style.width = '80px';
+        
+        const removeButton = document.createElement('button');
+        removeButton.textContent = '-';
+        removeButton.type = 'button';
+        removeButton.className = 'btn-remove';
+        removeButton.onclick = () => removeProductField(index);
+
+        const productItem = document.createElement('div');
+        productItem.className = 'product-item';
+        productItem.id = `product-item-${index}`;
+        productItem.appendChild(productSelect);
+        productItem.appendChild(quantityInput);
+        productItem.appendChild(removeButton);
+        productsListDiv.appendChild(productItem);
+
+        if (allProducts.length > 0) {
+            salesProducts.push({
+                id: allProducts[0].ID_Producto,
+                cantidad: 1
+            });
+        }
+    }
+
+    function updateProduct(index, productId, quantity) {
+        salesProducts[index].id = productId;
+        salesProducts[index].cantidad = quantity;
+    }
+
+    function removeProductField(index) {
+        const element = document.getElementById(`product-item-${index}`);
+        if (element) {
+            element.remove();
+        }
+        salesProducts.splice(index, 1);
+
+        const productsListDiv = document.getElementById('products-list');
+        productsListDiv.innerHTML = '';
+        salesProducts.forEach((p, i) => {
+            const productSelect = document.createElement('select');
+            productSelect.innerHTML = allProducts.map(prod => 
+                `<option value="${prod.ID_Producto}" data-price="${prod.Precio}">${prod.Nombre_del_producto}</option>`
+            ).join('');
+            productSelect.value = p.id;
+            productSelect.onchange = (e) => updateProduct(i, e.target.value, salesProducts[i].cantidad);
+
+            const quantityInput = document.createElement('input');
+            quantityInput.type = 'number';
+            quantityInput.value = p.cantidad;
+            quantityInput.min = 1;
+            quantityInput.onchange = (e) => updateProduct(i, salesProducts[i].id, parseInt(e.target.value));
+            quantityInput.style.width = '80px';
+            
+            const removeButton = document.createElement('button');
+            removeButton.textContent = '-';
+            removeButton.type = 'button';
+            removeButton.className = 'btn-remove';
+            removeButton.onclick = () => removeProductField(i);
+
+            const productItem = document.createElement('div');
+            productItem.className = 'product-item';
+            productItem.id = `product-item-${i}`;
+            productItem.appendChild(productSelect);
+            productItem.appendChild(quantityInput);
+            productItem.appendChild(removeButton);
+            productsListDiv.appendChild(productItem);
+        });
+    }
+
+    function toggleSaleDetails(button) {
+        const details = button.nextElementSibling;
+        details.style.display = details.style.display === 'none' ? 'block' : 'none';
+    }
+
+</script>
 </body>
 </html>
