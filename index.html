@@ -334,13 +334,6 @@
             border-radius: 8px;
             margin-top: 20px;
         }
-
-        .divider {
-            text-align: center;
-            font-weight: bold;
-            margin: 20px 0;
-            color: #ccc;
-        }
     </style>
 </head>
 <body>
@@ -388,7 +381,7 @@
         <h3>3. Pestaña "Inventario"</h3>
         <p>Esta sección te permite gestionar tu inventario de productos. En la tabla superior puedes ver todos los productos disponibles, sus precios y el stock actual. El stock se actualiza automáticamente cada vez que se registra una venta.</p>
         <h4>3.1. Agregar/Actualizar Productos</h4>
-        <p>Usa el formulario para añadir nuevos productos o actualizar el stock de los existentes. Simplemente selecciona el producto de la lista (para actualizar) o introduce un nuevo nombre (para agregar), y luego introduce la cantidad.</p>
+        <p>Usa el formulario para añadir nuevos productos o actualizar el stock de los existentes. Si introduces un nombre de producto que ya existe, se le sumará la cantidad que especifiques a su stock actual. Si es un producto nuevo, se creará uno nuevo en la lista.</p>
     </div>
 </div>
 
@@ -450,29 +443,20 @@
             
             <div class="inventory-form-section">
                 <form id="addProductForm">
-                    <h3 style="color: #8e24aa;">Actualizar o Agregar Producto</h3>
-                    <p style="text-align: left; color: #ccc;">Selecciona un producto existente o introduce uno nuevo.</p>
-
-                    <div class="form-group">
-                        <label for="existing-product-select">Seleccionar producto existente</label>
-                        <select id="existing-product-select" name="ID_Producto">
-                            </select>
-                    </div>
-
-                    <div class="divider">--- O ---</div>
+                    <h3 style="color: #8e24aa;">Agregar o Actualizar Producto</h3>
                     
                     <div class="form-group">
-                        <label for="new-product-name">Agregar nuevo producto</label>
-                        <input type="text" id="new-product-name" placeholder="Nombre del nuevo producto" name="Nombre_del_producto">
+                        <label for="product-name">Nombre del Producto</label>
+                        <input type="text" id="product-name" name="Nombre_del_producto" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="product-price">Precio</label>
-                        <input type="number" id="product-price" name="Precio" step="0.01" min="0" required>
+                        <label for="product-price">Precio (Solo si es un producto nuevo)</label>
+                        <input type="number" id="product-price" name="Precio" step="0.01" min="0">
                     </div>
 
                     <div class="form-group">
-                        <label for="product-stock">Stock a añadir (o stock inicial si es nuevo)</label>
+                        <label for="product-stock">Stock a añadir</label>
                         <input type="number" id="product-stock" name="Stock" min="0" required>
                     </div>
                     <button type="submit" class="btn-submit">Guardar Cambios</button>
@@ -533,10 +517,8 @@
 
     async function loadInventory() {
         const inventoryList = document.getElementById('inventory-list');
-        const productSelect = document.getElementById('existing-product-select');
         
         inventoryList.innerHTML = '<p>Cargando inventario...</p>';
-        productSelect.innerHTML = '';
         
         await fetchProducts();
 
@@ -554,19 +536,8 @@
             });
             html += '</tbody></table>';
             inventoryList.innerHTML = html;
-
-            allProducts.forEach(product => {
-                const option = document.createElement('option');
-                option.value = product['ID_Producto'];
-                option.textContent = `${product['Nombre_del_producto']} (Stock: ${product.Stock})`;
-                productSelect.appendChild(option);
-            });
         } else {
             inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
-            const option = document.createElement('option');
-            option.textContent = 'No hay productos';
-            productSelect.appendChild(option);
-            productSelect.disabled = true;
         }
     }
 
@@ -910,30 +881,28 @@
         addProductMessage.textContent = 'Enviando...';
         addProductMessage.className = 'form-message';
         
-        const existingProductId = document.getElementById('existing-product-select').value;
-        const newProductName = document.getElementById('new-product-name').value.trim();
+        const productName = document.getElementById('product-name').value;
         const productPrice = document.getElementById('product-price').value;
         const productStock = document.getElementById('product-stock').value;
 
-        let action = '';
-        const formData = new FormData();
-
-        if (newProductName) {
-            action = 'addProduct';
-            formData.append('action', action);
-            formData.append('Nombre_del_producto', newProductName);
-            formData.append('Precio', productPrice);
-            formData.append('Stock', productStock);
-        } else if (existingProductId) {
-            action = 'updateProductStock';
-            formData.append('action', action);
-            formData.append('ID_Producto', existingProductId);
-            formData.append('Stock', productStock);
-        } else {
-            addProductMessage.textContent = 'Por favor, selecciona un producto existente o introduce un nuevo nombre.';
+        // Validaciones básicas
+        if (!productName.trim()) {
+            addProductMessage.textContent = 'El nombre del producto es obligatorio.';
             addProductMessage.className = 'form-message error';
             return;
         }
+        if (!productStock || parseInt(productStock) <= 0) {
+            addProductMessage.textContent = 'La cantidad a añadir debe ser un número positivo.';
+            addProductMessage.className = 'form-message error';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('action', 'addProduct');
+        formData.append('Nombre_del_producto', productName);
+        formData.append('Precio', productPrice); // Se enviará vacío si no se llena, y se manejará en el backend
+        formData.append('Stock', productStock);
+        
 
         try {
           const response = await fetch(scriptURL, { method: 'POST', body: formData });
@@ -946,7 +915,7 @@
               addProductMessage.textContent = '¡Operación exitosa!';
               addProductMessage.className = 'form-message success';
               addProductForm.reset();
-              loadInventory();
+              loadInventory(); // Recargar el inventario para ver los cambios
             }
           } else {
             addProductMessage.textContent = 'Error al procesar la solicitud.';
