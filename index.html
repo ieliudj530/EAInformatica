@@ -351,6 +351,8 @@
             <li><strong>Nombre:</strong> Nombre completo del cliente.</li>
             <li><strong>CPF/CNPJ:</strong> Número de identificación del cliente (sin puntos ni guiones).</li>
             <li><strong>Email:</strong> Correo electrónico del cliente.</li>
+            <li><strong>Teléfono:</strong> Número de teléfono del cliente.</li>
+            <li><strong>Dirección:</strong> Dirección del cliente.</li>
             <li><strong>Fecha:</strong> Fecha de registro del cliente.</li>
         </ul>
         <p>Al hacer clic en <strong>"Guardar Cliente"</strong>, la información se guardará en la hoja de cálculo <code>Clientes</code>.</p>
@@ -412,6 +414,14 @@
                 <div class="form-group">
                     <label for="Email">Email</label>
                     <input type="email" id="Email" name="Email" required>
+                </div>
+                <div class="form-group">
+                    <label for="Telefono">Teléfono</label>
+                    <input type="text" id="Telefono" name="Telefono">
+                </div>
+                <div class="form-group">
+                    <label for="Direccion">Dirección</label>
+                    <input type="text" id="Direccion" name="Direccion">
                 </div>
                 <div class="form-group">
                     <label for="Fecha">Fecha</label>
@@ -623,6 +633,8 @@
                     <p><span class="result-label">Nombre:</span> ${data.Nome}</p>
                     <p><span class="result-label">CPF/CNPJ:</span> ${data['CPF/CNPJ']}</p>
                     <p><span class="result-label">Email:</span> ${data.Email}</p>
+                    <p><span class="result-label">Teléfono:</span> ${data.Telefono || 'N/A'}</p>
+                    <p><span class="result-label">Dirección:</span> ${data.Direccion || 'N/A'}</p>
                     <p><span class="result-label">Fecha de Registro:</span> ${new Date(data.Fecha).toLocaleDateString()}</p>
                     <hr>
                     <p class="total-debt-info"><strong>Deuda Total Pendiente: R$ ${data.totalDebt}</strong></p>
@@ -889,7 +901,6 @@
         const productPrice = document.getElementById('product-price').value;
         const productStock = document.getElementById('product-stock').value;
 
-        // Validaciones básicas
         if (!productName.trim()) {
             addProductMessage.textContent = 'El nombre del producto es obligatorio.';
             addProductMessage.className = 'form-message error';
@@ -904,7 +915,7 @@
         const formData = new FormData();
         formData.append('action', 'addProduct');
         formData.append('Nombre_del_producto', productName);
-        formData.append('Precio', productPrice); // Se enviará vacío si no se llena, y se manejará en el backend
+        formData.append('Precio', productPrice);
         formData.append('Stock', productStock);
         
 
@@ -919,7 +930,7 @@
               addProductMessage.textContent = '¡Operación exitosa!';
               addProductMessage.className = 'form-message success';
               addProductForm.reset();
-              loadInventory(); // Recargar el inventario para ver los cambios
+              loadInventory();
             }
           } else {
             addProductMessage.textContent = 'Error al procesar la solicitud.';
