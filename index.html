@@ -184,6 +184,62 @@
         .btn-add:hover, .btn-remove:hover {
             opacity: 0.8;
         }
+        .total-debt-info {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #f44336;
+            border: 2px solid #f44336;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .sale-item.pending {
+            border-left: 5px solid #f44336;
+            padding-left: 10px;
+        }
+        .sale-item.paid {
+            border-left: 5px solid #4CAF50;
+            padding-left: 10px;
+        }
+        .btn-pay {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .sale-details-form {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        /* Nuevos estilos para la tabla de inventario */
+        .inventory-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .inventory-table th, .inventory-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .inventory-table th {
+            background-color: #6a1b9a;
+            color: white;
+            font-weight: 600;
+        }
+        .inventory-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .inventory-table tr:hover {
+            background-color: #f1f1f1;
+        }
     </style>
 </head>
 <body>
@@ -278,14 +334,18 @@
             allProducts = await response.json();
             
             if (allProducts.length > 0) {
-                let html = '<ul>';
+                let html = '<table class="inventory-table">';
+                html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th></tr></thead>';
+                html += '<tbody>';
                 allProducts.forEach(product => {
-                    html += `<li><span class="result-label">ID:</span> ${product['ID_Producto']} - 
-                             <span class="result-label">Nombre:</span> ${product['Nombre_del_producto']} - 
-                             <span class="result-label">Precio:</span> R$ ${product.Precio} - 
-                             <span class="result-label">Stock:</span> ${product.Stock}</li>`;
+                    html += `<tr>
+                               <td>${product['ID_Producto']}</td>
+                               <td>${product['Nombre_del_producto']}</td>
+                               <td>R$ ${product.Precio.toFixed(2)}</td>
+                               <td>${product.Stock}</td>
+                             </tr>`;
                 });
-                html += '</ul>';
+                html += '</tbody></table>';
                 inventoryList.innerHTML = html;
             } else {
                 inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
@@ -350,11 +410,15 @@
                     ? `<h4>Historial de Ventas:</h4>
                        <ul>
                            ${data.sales.map(sale => `
-                               <li>
-                                   <span class="result-label">ID Venta:</span> ${sale.id} | 
-                                   <span class="result-label">Monto:</span> R$ ${sale.monto.toFixed(2)} | 
-                                   <span class="result-label">Fecha:</span> ${new Date(sale.fecha).toLocaleDateString()}
+                               <li class="sale-item ${sale.estado === 'Pagado' ? 'paid' : 'pending'}">
+                                   <p><span class="result-label">ID Venta:</span> ${sale.id} | 
+                                   <span class="result-label">Monto Total:</span> R$ ${sale.montoTotal.toFixed(2)} | 
+                                   <span class="result-label">Pagado:</span> R$ ${sale.montoPagado.toFixed(2)} | 
+                                   <span class="result-label">Deuda:</span> R$ ${sale.deudaRestante.toFixed(2)}</p>
+                                   <p><span class="result-label">Fecha:</span> ${new Date(sale.fecha).toLocaleDateString()}
                                    <button onclick="toggleSaleDetails(this)">+</button>
+                                   ${sale.estado === 'Pendiente' ? `<button class="btn-pay" onclick="showPaymentForm(${sale.id}, ${sale.deudaRestante})">Pagar</button>` : `<span style="color:#4CAF50; font-weight:bold;">(Pagado)</span>`}</p>
+                                   
                                    <div class="sale-details" style="display:none;">
                                         <ul>
                                             ${sale.productos.map(p => `<li>${p.nombre} (${p.cantidad} unidad/es)</li>`).join('')}
@@ -371,10 +435,10 @@
                     <p><span class="result-label">Email:</span> ${data.Email}</p>
                     <p><span class="result-label">Fecha de Registro:</span> ${new Date(data.Fecha).toLocaleDateString()}</p>
                     <hr>
-                    <p><strong><span class="result-label">Monto total de ventas:</span> R$ ${data.totalSales}</strong></p>
+                    <p class="total-debt-info"><strong>Deuda Total Pendiente: R$ ${data.totalDebt}</strong></p>
                     
                     <div style="margin-top: 20px;">
-                        <h3 style="color: #8e24aa;">Registrar Venta para ${data.Nome}</h3>
+                        <h3 style="color: #8e24aa;">Registrar Nueva Venta para ${data.Nome}</h3>
                         <form id="saleForm">
                             <input type="hidden" name="action" value="addSale">
                             <input type="hidden" name="CPF/CNPJ" value="${data['CPF/CNPJ']}">
@@ -385,17 +449,20 @@
                                 <label for="sale-fecha">Fecha de Venta</label>
                                 <input type="date" id="sale-fecha" name="Fecha" required>
                             </div>
-
-                            <div id="products-list">
-                                </div>
+                            <div id="products-list"></div>
                             <div style="text-align: right;">
                                 <button type="button" onclick="addProductField()" class="btn-add">+</button>
+                            </div>
+                            <div class="form-group" style="margin-top: 20px;">
+                                <label for="initialPayment">Abono Inicial (opcional)</label>
+                                <input type="number" id="initialPayment" name="Monto_Pagado" step="0.01" min="0">
                             </div>
                             <br>
                             <button type="submit" class="btn-submit">Guardar Venta</button>
                             <p id="sale-message" class="form-message"></p>
                         </form>
                     </div>
+
                     ${salesHtml}
                 `;
                 salesProducts = [];
@@ -454,7 +521,73 @@
             searchMessage.className = 'form-message error';
         }
     });
+    
+    async function handlePayment(saleId, paymentAmount) {
+        const paymentMessage = document.getElementById(`payment-message-${saleId}`);
+        paymentMessage.textContent = 'Registrando pago...';
+        paymentMessage.className = 'form-message';
+        try {
+            const formData = new FormData();
+            formData.append('action', 'addPayment');
+            formData.append('ID_Transaccion', saleId);
+            formData.append('Monto_Pago', paymentAmount);
 
+            const response = await fetch(scriptURL, { method: 'POST', body: formData });
+            const resultText = await response.text();
+            if (response.ok) {
+                if (resultText.includes("Error")) {
+                    paymentMessage.textContent = resultText;
+                    paymentMessage.className = 'form-message error';
+                } else {
+                    paymentMessage.textContent = '¡Pago registrado con éxito!';
+                    paymentMessage.className = 'form-message success';
+                    searchForm.dispatchEvent(new Event('submit'));
+                }
+            } else {
+                paymentMessage.textContent = 'Error al registrar el pago.';
+                paymentMessage.className = 'form-message error';
+            }
+        } catch (error) {
+            paymentMessage.textContent = 'Hubo un problema de conexión.';
+            paymentMessage.className = 'form-message error';
+        }
+    }
+
+    function showPaymentForm(saleId, currentDebt) {
+        const formId = `payment-form-${saleId}`;
+        const existingForm = document.getElementById(formId);
+        if (existingForm) {
+            existingForm.remove();
+            return;
+        }
+
+        const paymentForm = document.createElement('form');
+        paymentForm.id = formId;
+        paymentForm.className = 'sale-details-form';
+        paymentForm.onsubmit = (e) => {
+            e.preventDefault();
+            const amountInput = paymentForm.querySelector('input');
+            const amount = parseFloat(amountInput.value);
+            if (isNaN(amount) || amount <= 0 || amount > currentDebt) {
+                alert(`El monto debe ser un número positivo y no mayor a la deuda restante de R$ ${currentDebt.toFixed(2)}.`);
+                return;
+            }
+            handlePayment(saleId, amount);
+        };
+        
+        paymentForm.innerHTML = `
+            <div class="form-group">
+                <label for="payment-amount-${saleId}">Monto a pagar (Deuda: R$ ${currentDebt.toFixed(2)})</label>
+                <input type="number" id="payment-amount-${saleId}" step="0.01" min="0.01" max="${currentDebt}" required>
+            </div>
+            <button type="submit" class="btn-submit">Registrar Abono</button>
+            <p id="payment-message-${saleId}" class="form-message"></p>
+        `;
+
+        const saleItem = document.querySelector(`.sale-item .btn-pay[onclick*="${saleId}"]`).closest('.sale-item');
+        saleItem.appendChild(paymentForm);
+    }
+    
     function addProductField() {
         const productsListDiv = document.getElementById('products-list');
         const index = salesProducts.length;
@@ -540,7 +673,7 @@
     }
 
     function toggleSaleDetails(button) {
-        const details = button.nextElementSibling;
+        const details = button.nextElementSibling.nextElementSibling;
         details.style.display = details.style.display === 'none' ? 'block' : 'none';
     }
 
