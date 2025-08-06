@@ -327,6 +327,20 @@
             font-family: monospace;
             color: #fff;
         }
+
+        .inventory-form-section {
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .divider {
+            text-align: center;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #ccc;
+        }
     </style>
 </head>
 <body>
@@ -373,8 +387,8 @@
     <div class="manual-section">
         <h3>3. Pestaña "Inventario"</h3>
         <p>Esta sección te permite gestionar tu inventario de productos. En la tabla superior puedes ver todos los productos disponibles, sus precios y el stock actual. El stock se actualiza automáticamente cada vez que se registra una venta.</p>
-        <h4>3.1. Agregar Nuevo Producto</h4>
-        <p>Utiliza el formulario en la parte inferior para añadir un nuevo producto al inventario. Completa los campos y haz clic en <strong>"Agregar Producto"</strong>.</p>
+        <h4>3.1. Agregar/Actualizar Productos</h4>
+        <p>Usa el formulario para añadir nuevos productos o actualizar el stock de los existentes. Simplemente selecciona el producto de la lista (para actualizar) o introduce un nuevo nombre (para agregar), y luego introduce la cantidad.</p>
     </div>
 </div>
 
@@ -434,23 +448,34 @@
                 <p>Cargando inventario...</p>
             </div>
             
-            <div id="add-product-container">
-                <h3 style="color: #8e24aa;">Agregar Nuevo Producto</h3>
+            <div class="inventory-form-section">
                 <form id="addProductForm">
-                    <input type="hidden" name="action" value="addProduct">
+                    <h3 style="color: #8e24aa;">Actualizar o Agregar Producto</h3>
+                    <p style="text-align: left; color: #ccc;">Selecciona un producto existente o introduce uno nuevo.</p>
+
                     <div class="form-group">
-                        <label for="product-name">Nombre del Producto</label>
-                        <input type="text" id="product-name" name="Nombre_del_producto" required>
+                        <label for="existing-product-select">Seleccionar producto existente</label>
+                        <select id="existing-product-select" name="ID_Producto">
+                            </select>
                     </div>
+
+                    <div class="divider">--- O ---</div>
+                    
+                    <div class="form-group">
+                        <label for="new-product-name">Agregar nuevo producto</label>
+                        <input type="text" id="new-product-name" placeholder="Nombre del nuevo producto" name="Nombre_del_producto">
+                    </div>
+
                     <div class="form-group">
                         <label for="product-price">Precio</label>
                         <input type="number" id="product-price" name="Precio" step="0.01" min="0" required>
                     </div>
+
                     <div class="form-group">
-                        <label for="product-stock">Stock</label>
+                        <label for="product-stock">Stock a añadir (o stock inicial si es nuevo)</label>
                         <input type="number" id="product-stock" name="Stock" min="0" required>
                     </div>
-                    <button type="submit" class="btn-submit">Agregar Producto</button>
+                    <button type="submit" class="btn-submit">Guardar Cambios</button>
                     <p id="add-product-message" class="form-message"></p>
                 </form>
             </div>
@@ -468,13 +493,22 @@
         try {
             openTab('clientTab', document.getElementById('tab-client'));
             
-            const productsResponse = await fetch(scriptURL + '?action=getProducts');
-            if (!productsResponse.ok) throw new Error('Error al obtener los productos.');
-            allProducts = await productsResponse.json();
+            await fetchProducts();
             
         } catch (error) {
             console.error("Error al cargar la aplicación:", error);
             alert("Hubo un problema al cargar la aplicación. Por favor, recarga la página. Mensaje: " + error.message);
+        }
+    }
+
+    async function fetchProducts() {
+        try {
+            const productsResponse = await fetch(scriptURL + '?action=getProducts');
+            if (!productsResponse.ok) throw new Error('Error al obtener los productos.');
+            allProducts = await productsResponse.json();
+        } catch (error) {
+            console.error("Error al cargar los productos:", error);
+            allProducts = []; // Asegura que allProducts sea un array vacío si falla
         }
     }
     
@@ -499,31 +533,40 @@
 
     async function loadInventory() {
         const inventoryList = document.getElementById('inventory-list');
+        const productSelect = document.getElementById('existing-product-select');
+        
         inventoryList.innerHTML = '<p>Cargando inventario...</p>';
-        try {
-            const response = await fetch(scriptURL + '?action=getProducts');
-            if (!response.ok) throw new Error('Error al obtener los productos.');
-            allProducts = await response.json();
-            
-            if (allProducts.length > 0) {
-                let html = '<table class="inventory-table">';
-                html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th></tr></thead>';
-                html += '<tbody>';
-                allProducts.forEach(product => {
-                    html += `<tr>
-                               <td>${product['ID_Producto']}</td>
-                               <td>${product['Nombre_del_producto']}</td>
-                               <td>R$ ${product.Precio.toFixed(2)}</td>
-                               <td>${product.Stock}</td>
-                             </tr>`;
-                });
-                html += '</tbody></table>';
-                inventoryList.innerHTML = html;
-            } else {
-                inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
-            }
-        } catch (error) {
-            inventoryList.innerHTML = '<p class="form-message error">Error al cargar el inventario: ' + error.message + '</p>';
+        productSelect.innerHTML = '';
+        
+        await fetchProducts();
+
+        if (allProducts.length > 0) {
+            let html = '<table class="inventory-table">';
+            html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th></tr></thead>';
+            html += '<tbody>';
+            allProducts.forEach(product => {
+                html += `<tr>
+                           <td>${product['ID_Producto']}</td>
+                           <td>${product['Nombre_del_producto']}</td>
+                           <td>R$ ${product.Precio.toFixed(2)}</td>
+                           <td>${product.Stock}</td>
+                         </tr>`;
+            });
+            html += '</tbody></table>';
+            inventoryList.innerHTML = html;
+
+            allProducts.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product['ID_Producto'];
+                option.textContent = `${product['Nombre_del_producto']} (Stock: ${product.Stock})`;
+                productSelect.appendChild(option);
+            });
+        } else {
+            inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
+            const option = document.createElement('option');
+            option.textContent = 'No hay productos';
+            productSelect.appendChild(option);
+            productSelect.disabled = true;
         }
     }
 
@@ -864,10 +907,35 @@
     if (addProductForm) {
       addProductForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        addProductMessage.textContent = 'Agregando producto...';
+        addProductMessage.textContent = 'Enviando...';
         addProductMessage.className = 'form-message';
+        
+        const existingProductId = document.getElementById('existing-product-select').value;
+        const newProductName = document.getElementById('new-product-name').value.trim();
+        const productPrice = document.getElementById('product-price').value;
+        const productStock = document.getElementById('product-stock').value;
+
+        let action = '';
+        const formData = new FormData();
+
+        if (newProductName) {
+            action = 'addProduct';
+            formData.append('action', action);
+            formData.append('Nombre_del_producto', newProductName);
+            formData.append('Precio', productPrice);
+            formData.append('Stock', productStock);
+        } else if (existingProductId) {
+            action = 'updateProductStock';
+            formData.append('action', action);
+            formData.append('ID_Producto', existingProductId);
+            formData.append('Stock', productStock);
+        } else {
+            addProductMessage.textContent = 'Por favor, selecciona un producto existente o introduce un nuevo nombre.';
+            addProductMessage.className = 'form-message error';
+            return;
+        }
+
         try {
-          const formData = new FormData(addProductForm);
           const response = await fetch(scriptURL, { method: 'POST', body: formData });
           const resultText = await response.text();
           if (response.ok) {
@@ -875,13 +943,13 @@
               addProductMessage.textContent = resultText;
               addProductMessage.className = 'form-message error';
             } else {
-              addProductMessage.textContent = '¡Producto agregado con éxito!';
+              addProductMessage.textContent = '¡Operación exitosa!';
               addProductMessage.className = 'form-message success';
               addProductForm.reset();
               loadInventory();
             }
           } else {
-            addProductMessage.textContent = 'Error al agregar el producto.';
+            addProductMessage.textContent = 'Error al procesar la solicitud.';
             addProductMessage.className = 'form-message error';
           }
         } catch (error) {
