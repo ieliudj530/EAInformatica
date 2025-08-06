@@ -334,6 +334,45 @@
             border-radius: 8px;
             margin-top: 20px;
         }
+        
+        .debt-client-header {
+            cursor: pointer;
+            background-color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .debt-client-header:hover {
+            background-color: #444;
+        }
+        
+        .debt-client-header h4 {
+            margin: 0;
+            color: #ab47bc;
+        }
+        
+        .debt-client-header span {
+            font-weight: 600;
+        }
+        
+        .debt-details {
+            display: none;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            background-color: #2a2a2a;
+            border-left: 3px solid #8e24aa;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .debt-details p {
+            margin: 5px 0;
+        }
+
     </style>
 </head>
 <body>
@@ -572,20 +611,22 @@
         debtList.innerHTML = '<p>Cargando cuentas pendientes...</p>';
         try {
             const response = await fetch(scriptURL + '?action=getPendingSales');
-            const pendingSales = await response.json();
-            if (pendingSales.length > 0) {
-                let html = '<table class="inventory-table">';
-                html += '<thead><tr><th>ID Venta</th><th>Cliente</th><th>Fecha</th><th>Deuda Restante</th></tr></thead>';
-                html += '<tbody>';
-                pendingSales.forEach(sale => {
-                    html += `<tr>
-                                <td>${sale.id}</td>
-                                <td>${sale.nombreCliente}</td>
-                                <td>${new Date(sale.fecha).toLocaleDateString()}</td>
-                                <td>R$ ${sale.deudaRestante.toFixed(2)}</td>
-                              </tr>`;
+            const groupedSales = await response.json();
+            if (groupedSales.length > 0) {
+                let html = '<h3>Deuda Total por Cliente</h3>';
+                groupedSales.forEach((clientDebt, index) => {
+                    html += `
+                        <div class="debt-client-header" onclick="toggleDebtDetails('debt-details-${index}')">
+                            <h4>${clientDebt.nombreCliente}</h4>
+                            <span>Deuda Total: R$ ${clientDebt.deudaTotal.toFixed(2)}</span>
+                        </div>
+                        <div class="debt-details" id="debt-details-${index}">
+                            ${clientDebt.ventas.map(sale => `
+                                <p><strong>ID Venta:</strong> ${sale.id} | <strong>Fecha:</strong> ${new Date(sale.fecha).toLocaleDateString()} | <strong>Deuda:</strong> R$ ${sale.deudaRestante.toFixed(2)}</p>
+                            `).join('')}
+                        </div>
+                    `;
                 });
-                html += '</tbody></table>';
                 debtList.innerHTML = html;
             } else {
                 debtList.innerHTML = '<p>No hay cuentas pendientes en este momento.</p>';
@@ -593,6 +634,15 @@
         } catch (error) {
             console.error("Error al cargar las cuentas pendientes:", error);
             debtList.innerHTML = '<p>Error al cargar las cuentas pendientes. Asegúrate de que las columnas en tu hoja "Ventas" están escritas correctamente.</p>';
+        }
+    }
+    
+    function toggleDebtDetails(detailsId) {
+        const details = document.getElementById(detailsId);
+        if (details.style.display === 'block') {
+            details.style.display = 'none';
+        } else {
+            details.style.display = 'block';
         }
     }
 
