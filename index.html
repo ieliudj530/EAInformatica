@@ -366,6 +366,60 @@
         height: 100px !important;
         border-radius: 50%;
     }
+    /* === CÓDIGO PARA RESPONSIVIDAD (CELULARES) === */
+@media (max-width: 768px) {
+
+    body {
+        padding: 10px; /* Menos espacio en los bordes de la pantalla */
+    }
+
+    .container {
+        padding: 15px; /* Menos padding en el contenedor principal */
+    }
+
+    /* 1. Hacemos que los botones del menú se apilen verticalmente */
+    .tab-menu {
+        flex-direction: column;
+        gap: 10px;
+        align-items: center; /* Centramos los botones */
+    }
+
+    .tab-button {
+        width: 100%; /* Para que ocupen todo el ancho disponible */
+        text-align: center;
+    }
+
+    /* 2. Ajustamos la ventana del manual para que quepa */
+    #user-manual-content {
+        width: 90%;
+        max-width: 400px; /* No será más grande que 400px, pero sí más pequeño si es necesario */
+        top: 15px;
+        right: 5%; /* Centramos un poco más */
+        left: 5%;
+        max-height: 80vh;
+    }
+
+    /* 3. Para que la tabla de inventario no rompa el diseño, permitimos scroll horizontal */
+    .inventory-table {
+        display: block; /* Necesario para que overflow-x funcione */
+        width: 100%;
+        overflow-x: auto; /* ¡Magia! Permite deslizar la tabla hacia los lados */
+        white-space: nowrap; /* Evita que el texto de las celdas se parta */
+    }
+
+    /* 4. Ajustamos tamaños de texto y logos para pantallas pequeñas */
+    h1 {
+        font-size: 1.8em;
+    }
+
+    h2 {
+        font-size: 1.4em;
+    }
+
+    div[style*="position:fixed"][style*="left:20px"] img {
+        height: 60px !important; /* Hacemos el logo de la esquina un poco más pequeño */
+    }
+}
 </style>
 </head>
 <body>
