@@ -678,6 +678,7 @@
             
             <div class="inventory-form-section" id="addProductSection">
                 <form id="addProductForm">
+                    <input type="hidden" name="action" value="addProduct">
                     <h3>Agregar Nuevo Producto</h3>
                     <div class="form-group">
                         <label for="product-name">Nombre del Producto</label>
@@ -959,7 +960,7 @@
                                     <div class="sale-debt-item">
                                         <div class="sale-debt-header" onclick="toggleVisibility('sale-products-${clientIndex}-${saleIndex}')">
                                             <span>ID Venta: ${sale.id} | Deuda: R$ ${sale.deudaRestante.toFixed(2)} | Fecha: ${new Date(sale.fecha).toLocaleDateString()}</span>
-                                            <button class="btn-pay" onclick="event.stopPropagation(); showUniversalPaymentForm(${sale.id}, ${sale.deudaRestante}, 'debt-list')">Abonar</button>
+                                            <button class="btn-pay" onclick="event.stopPropagation(); showUniversalPaymentForm(event, ${sale.id}, ${sale.deudaRestante}, 'debt-list')">Abonar</button>
                                         </div>
                                         <div class="sale-products-container" id="sale-products-${clientIndex}-${saleIndex}">
                                             <ul>${sale.productos.map(p => `<li>${p.cantidad}x ${p.nombre}</li>`).join('')}</ul>
@@ -992,9 +993,9 @@
     }
 
     const customerForm = document.getElementById('customerForm');
-    const customerMessage = document.getElementById('form-message');
     customerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const customerMessage = document.getElementById('form-message');
         customerMessage.textContent = 'Enviando...';
         customerMessage.className = 'form-message';
         showLoading();
@@ -1052,7 +1053,7 @@
                                    <span class="result-label">Deuda:</span> R$ ${sale.deudaRestante.toFixed(2)}</p>
                                    <p><span class="result-label">Fecha:</span> ${new Date(sale.fecha).toLocaleDateString()}
                                    <button onclick="toggleSaleDetails(this)">+</button>
-                                   ${sale.estado === 'Pendiente' ? `<button class="btn-pay" onclick="showUniversalPaymentForm(${sale.id}, ${sale.deudaRestante}, 'results-container')">Pagar</button>` : `<span style="color:var(--color-exito); font-weight:bold;">(${sale.estado})</span>`}</p>
+                                   ${sale.estado === 'Pendiente' ? `<button class="btn-pay" onclick="showUniversalPaymentForm(event, ${sale.id}, ${sale.deudaRestante}, 'results-container')">Pagar</button>` : `<span style="color:var(--color-exito); font-weight:bold;">(${sale.estado})</span>`}</p>
                                    
                                    <div class="sale-details" style="display:none;">
                                         <ul>
@@ -1163,7 +1164,7 @@
         }
     });
 
-    function showUniversalPaymentForm(saleId, currentDebt, containerId) {
+    function showUniversalPaymentForm(event, saleId, currentDebt, containerId) {
         const formId = `payment-form-${saleId}`;
         
         // Eliminar formularios de pago abiertos
@@ -1200,7 +1201,7 @@
         const paymentForm = document.getElementById(`payment-form-${saleId}`);
         const amountInput = paymentForm.querySelector('input');
         const paymentMessage = paymentForm.querySelector('p');
-        const amount = parseFloat(amountInput.value);
+        let amount = parseFloat(amountInput.value);
 
         if (isNaN(amount) || amount <= 0) {
             alert(`El monto debe ser un número positivo.`);
@@ -1210,6 +1211,10 @@
         if (amount > currentDebt && Math.abs(amount - currentDebt) > 0.01) {
             alert(`El monto del pago es mayor que la deuda restante de R$ ${currentDebt.toFixed(2)}.`);
             return;
+        }
+        
+        if (Math.abs(amount - currentDebt) < 0.01) {
+            amount = currentDebt;
         }
 
         paymentMessage.textContent = 'Registrando pago...';
@@ -1256,10 +1261,16 @@
             productsListDiv.appendChild(productItem);
             return;
         }
+        
+        const availableProducts = allProducts.filter(p => p.Stock > 0);
+        if (availableProducts.length === 0 && salesProducts.length === 0) {
+             productItem.innerHTML = '<p>No hay productos con stock disponible.</p>';
+             productsListDiv.appendChild(productItem);
+             return;
+        }
 
         const productSelect = document.createElement('select');
-        productSelect.innerHTML = allProducts
-            .filter(p => p.Stock > 0)
+        productSelect.innerHTML = availableProducts
             .map(p => `<option value="${p.ID_Producto}">${p.Nombre_del_producto} (Stock: ${p.Stock})</option>`)
             .join('');
         productSelect.onchange = (e) => updateProduct(index, e.target.value, salesProducts[index].cantidad);
@@ -1286,6 +1297,10 @@
         if (selectedProduct) {
             salesProducts.push({ id: selectedProduct.ID_Producto, cantidad: 1 });
             quantityInput.max = selectedProduct.Stock;
+        } else if (availableProducts.length > 0) {
+            // Si el producto por defecto no se encontró (improbable), selecciona el primero de la lista
+            salesProducts.push({ id: availableProducts[0].ID_Producto, cantidad: 1 });
+            quantityInput.max = availableProducts[0].Stock;
         }
     }
 
