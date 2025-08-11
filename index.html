@@ -564,7 +564,7 @@
 
     <div class="manual-section">
         <h3>3. Inventario de Productos</h3>
-        <p>Visualiza todos los productos con su precio y stock. El stock se actualiza con cada venta.</p>
+        <p>Visualiza todos los productos con su precio y stock. El inventario está ordenado por ID.</p>
 
         <h4>3.1 Agregar Producto</h4>
         <ul>
@@ -616,13 +616,13 @@
     <p style="color:#0077ff; font-size:1.2em; margin-top:5px; font-weight:500;">Trabajamos con Inteligencia</p>
 </div>
     <div class="tab-menu" id="tab-menu">
-        <button class="tab-button active" id="tab-client" onclick="openTab('clientTab', this)">Registrar Cliente</button>
+        <button class="tab-button" id="tab-client" onclick="openTab('clientTab', this)">Registrar Cliente</button>
         <button class="tab-button" id="tab-search" onclick="openTab('searchTab', this)">Buscar Cliente & Ventas</button>
         <button class="tab-button" id="tab-inventory" onclick="openTab('inventoryTab', this)">Inventario</button>
         <button class="tab-button" id="tab-debt" onclick="openTab('debtTab', this)">Cuentas por Cobrar</button>
     </div>
 
-    <div id="clientTab" class="tab-content active">
+    <div id="clientTab" class="tab-content">
         <div class="form-container">
             <h2>Registro de Clientes</h2>
             <form id="customerForm">
@@ -742,6 +742,17 @@
     let currentPage = 1;
     const productsPerPage = 10;
 
+    // *** NUEVO: Listener para el botón "Atrás" del navegador ***
+    window.addEventListener('popstate', (event) => {
+        if (event.state && event.state.tab) {
+            // Llama a openTab pero sin agregar un nuevo estado al historial
+            openTab(event.state.tab, document.querySelector(`.tab-button[onclick*="'${event.state.tab}'"]`), true);
+        } else {
+            // Si el estado es nulo, vuelve a la pestaña inicial por defecto
+            openTab('clientTab', document.getElementById('tab-client'), true);
+        }
+    });
+
     function showLoading() {
         document.getElementById('loading-overlay').style.display = 'flex';
     }
@@ -750,15 +761,10 @@
         document.getElementById('loading-overlay').style.display = 'none';
     }
 
-    async function loadApp() {
+    async function loadApp(initialTab = 'clientTab') {
         try {
-            // Espera a que el DOM esté listo y el tab exista
-            setTimeout(() => {
-                const firstTabButton = document.getElementById('tab-client');
-                if (firstTabButton) {
-                    openTab('clientTab', firstTabButton);
-                }
-            }, 100);
+            const tabButton = document.querySelector(`.tab-button[onclick*="'${initialTab}'"]`);
+            openTab(initialTab, tabButton, true);
             await fetchProducts();
         } catch (error) {
             console.error("Error al cargar la aplicación:", error);
@@ -772,8 +778,10 @@
             const productsResponse = await fetch(scriptURL + '?action=getProducts');
             if (!productsResponse.ok) throw new Error('Error al obtener los productos.');
             allProducts = await productsResponse.json();
-            // Ordenar productos alfabéticamente por nombre
-            allProducts.sort((a, b) => a['Nombre_del_producto'].localeCompare(b['Nombre_del_producto']));
+            
+            // *** CAMBIO: Ordenar productos por ID_Producto numéricamente ***
+            allProducts.sort((a, b) => a['ID_Producto'] - b['ID_Producto']);
+
         } catch (error) {
             console.error("Error al cargar los productos:", error);
             allProducts = [];
@@ -782,26 +790,36 @@
         }
     }
     
-    function openTab(tabName, button) {
-        var i, tabContent, tabButtons;
-        tabContent = document.getElementsByClassName("tab-content");
-        for (i = 0; i < tabContent.length; i++) {
-            tabContent[i].style.display = "none";
+    // *** MODIFICADO: Ahora maneja el historial del navegador ***
+    function openTab(tabName, button, fromHistory = false) {
+        // Oculta todos los contenidos de las pestañas
+        const tabContents = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < tabContents.length; i++) {
+            tabContents[i].style.display = "none";
         }
-        tabButtons = document.getElementsByClassName("tab-button");
-        for (i = 0; i < tabButtons.length; i++) {
+
+        // Quita la clase 'active' de todos los botones
+        const tabButtons = document.getElementsByClassName("tab-button");
+        for (let i = 0; i < tabButtons.length; i++) {
             tabButtons[i].className = tabButtons[i].className.replace(" active", "");
         }
+
+        // Muestra el contenido de la pestaña actual y activa el botón
         document.getElementById(tabName).style.display = "block";
         if (button) {
             button.className += " active";
         }
 
+        // Si la navegación no viene del historial (es un clic del usuario), lo agregamos
+        if (!fromHistory) {
+            history.pushState({ tab: tabName }, '', `#${tabName}`);
+        }
+
         // Acciones específicas por pestaña
         if (tabName === 'inventoryTab') {
-            currentPage = 1; // Reiniciar paginación
+            currentPage = 1;
             loadInventory();
-            cancelEdit(); // Asegurarse de que el formulario de edición esté oculto
+            cancelEdit();
         } else if (tabName === 'debtTab') {
             loadPendingSales();
         } else if (tabName === 'searchTab') {
@@ -1165,14 +1183,25 @@
     });
 
     function showUniversalPaymentForm(event, saleId, currentDebt, containerId) {
+        // Código de depuración para la consola (F12)
+        console.log(`Función showUniversalPaymentForm llamada. ID de Venta: ${saleId}, Contenedor: ${containerId}`);
+
         const formId = `payment-form-${saleId}`;
         
-        // Eliminar formularios de pago abiertos
         const existingForms = document.querySelectorAll('.universal-payment-form');
         existingForms.forEach(form => form.remove());
 
-        const paymentFormContainer = document.getElementById('payment-form-container') || document.getElementById(containerId);
-        if (!paymentFormContainer) return;
+        let paymentFormContainer;
+        if (containerId === 'debt-list') {
+            paymentFormContainer = event.target.closest('.sale-debt-item');
+        } else {
+            paymentFormContainer = document.getElementById('payment-form-container');
+        }
+
+        if (!paymentFormContainer) {
+            console.error("Error: No se encontró el contenedor para el formulario de pago.");
+            return;
+        }
         
         const paymentForm = document.createElement('div'); 
         paymentForm.id = formId;
@@ -1190,8 +1219,7 @@
         `;
         
         if (containerId === 'debt-list') {
-             const saleItem = event.target.closest('.sale-debt-item');
-             saleItem.appendChild(paymentForm);
+             paymentFormContainer.appendChild(paymentForm);
         } else {
             paymentFormContainer.prepend(paymentForm);
         }
@@ -1255,12 +1283,6 @@
         const productItem = document.createElement('div');
         productItem.className = 'product-item';
         productItem.id = `product-item-${index}`;
-
-        if (allProducts.length === 0) {
-            productItem.innerHTML = '<p>No hay productos en el inventario para vender.</p>';
-            productsListDiv.appendChild(productItem);
-            return;
-        }
         
         const availableProducts = allProducts.filter(p => p.Stock > 0);
         if (availableProducts.length === 0 && salesProducts.length === 0) {
@@ -1298,7 +1320,6 @@
             salesProducts.push({ id: selectedProduct.ID_Producto, cantidad: 1 });
             quantityInput.max = selectedProduct.Stock;
         } else if (availableProducts.length > 0) {
-            // Si el producto por defecto no se encontró (improbable), selecciona el primero de la lista
             salesProducts.push({ id: availableProducts[0].ID_Producto, cantidad: 1 });
             quantityInput.max = availableProducts[0].Stock;
         }
@@ -1435,7 +1456,15 @@
         }
     }
     
-    document.addEventListener('DOMContentLoaded', loadApp);
+    // *** MODIFICADO: Ahora maneja el historial al cargar la página ***
+    document.addEventListener('DOMContentLoaded', () => {
+        // Determina la pestaña inicial desde la URL o usa la de cliente por defecto
+        const initialTab = window.location.hash ? window.location.hash.substring(1) : 'clientTab';
+        // Establece el estado inicial en el historial sin crear una nueva entrada
+        history.replaceState({ tab: initialTab }, '', `#${initialTab}`);
+        // Carga la aplicación con la pestaña inicial
+        loadApp(initialTab);
+    });
 
 </script>
 </body>
