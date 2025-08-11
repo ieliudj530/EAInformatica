@@ -466,6 +466,42 @@
     background-color: var(--color-fondo);
     border-radius: 0 0 5px 5px;
 }
+
+.total-general-debt {
+    text-align: right;
+    font-size: 1.4em;
+    font-weight: 600;
+    color: var(--color-primario);
+    margin-top: 20px;
+    padding: 10px;
+    background-color: var(--color-superficie);
+    border-radius: 8px;
+}
+/* ESTILOS PARA PAGINACIÓN */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 15px;
+}
+.pagination button {
+    background-color: var(--color-primario);
+    color: var(--color-texto-inverso);
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.pagination button:disabled {
+    background-color: var(--color-borde);
+    cursor: not-allowed;
+}
+.pagination span {
+    color: var(--color-texto-secundario);
+    font-weight: 600;
+}
 </style>
 </head>
 <body>
@@ -626,27 +662,25 @@
         </div>
     </div>
 
-    <div id="inventoryTab" class="tab-content">
+   <div id="inventoryTab" class="tab-content">
         <div class="form-container">
             <h2>Inventario de Productos</h2>
             <div id="inventory-list">
-                <p>Cargando inventario...</p>
-            </div>
+                </div>
+            
+            <div id="inventory-pagination"></div> 
             
             <div class="inventory-form-section" id="addProductSection">
                 <form id="addProductForm">
-                    <h3 style="color: #8e24aa;">Agregar Nuevo Producto</h3>
-                    
+                    <h3>Agregar Nuevo Producto</h3>
                     <div class="form-group">
                         <label for="product-name">Nombre del Producto</label>
                         <input type="text" id="product-name" name="Nombre_del_producto" required>
                     </div>
-
                     <div class="form-group">
                         <label for="product-price">Precio</label>
                         <input type="number" id="product-price" name="Precio" step="0.01" min="0" required>
                     </div>
-
                     <div class="form-group">
                         <label for="product-stock">Stock a añadir</label>
                         <input type="number" id="product-stock" name="Stock" min="0" required>
@@ -657,30 +691,29 @@
             </div>
             
             <div class="inventory-form-section" id="editProductSection" style="display:none;">
-                <form id="editProductForm">
-                    <h3 style="color: #8e24aa;">Editar Producto</h3>
-                    <input type="hidden" id="edit-product-id" name="ID_Producto">
-                    
+                <form id="editProductForm" onsubmit="return false;">
+                    <h3>Editar Producto</h3>
+                    <input type="hidden" id="edit-product-id">
                     <div class="form-group">
                         <label for="edit-product-name">Nombre del Producto</label>
-                        <input type="text" id="edit-product-name" name="Nombre_del_producto" required>
+                        <input type="text" id="edit-product-name" required>
                     </div>
-
                     <div class="form-group">
                         <label for="edit-product-price">Precio</label>
-                        <input type="number" id="edit-product-price" name="Precio" step="0.01" min="0" required>
+                        <input type="number" id="edit-product-price" step="0.01" min="0" required>
                     </div>
-
                     <div class="form-group">
-                        <label for="edit-product-stock">Stock a modificar (se sumará al stock actual)</label>
-                        <input type="number" id="edit-product-stock" name="Stock" required>
+                        <label for="edit-stock-amount">Cantidad a Modificar (ej: 10 para agregar, -5 para quitar)</label>
+                        <input type="number" id="edit-stock-amount" min="1" required placeholder="Ej: 10">
                     </div>
-                    <button type="submit" class="btn-submit">Guardar Cambios</button>
-                    <button type="button" class="btn-submit" onclick="cancelEdit()">Cancelar</button>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="button" class="btn-add" style="width: 50%;" onclick="handleStockUpdate('add')">Agregar Stock</button>
+                        <button type="button" class="btn-remove" style="width: 50%;" onclick="handleStockUpdate('subtract')">Quitar Stock</button>
+                    </div>
+                    <button type="button" class="btn-submit" style="background-color: var(--color-texto-secundario); margin-top: 10px;" onclick="cancelEdit()">Cancelar</button>
                     <p id="edit-product-message" class="form-message"></p>
                 </form>
             </div>
-
         </div>
     </div>
 
@@ -699,6 +732,8 @@
 
     let allProducts = [];
     let salesProducts = [];
+    let currentPage = 1;
+    const productsPerPage = 10;
 
     function showLoading() {
         document.getElementById('loading-overlay').style.display = 'flex';
@@ -761,41 +796,82 @@
         }
     }
 
-    async function loadInventory() {
-        const inventoryList = document.getElementById('inventory-list');
-        
-        inventoryList.innerHTML = '<p>Cargando inventario...</p>';
-        
-        await fetchProducts();
-
-        if (allProducts.length > 0) {
-            let html = '<table class="inventory-table">';
-            html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th><th></th></tr></thead>';
-            html += '<tbody>';
-            allProducts.forEach(product => {
-                html += `<tr>
-                           <td>${product['ID_Producto']}</td>
-                           <td>${product['Nombre_del_producto']}</td>
-                           <td>R$ ${product.Precio.toFixed(2)}</td>
-                           <td>${product.Stock}</td>
-                           <td>
-                                <div class="dropdown">
-                                    <button class="dropbtn">...</button>
-                                    <div class="dropdown-content">
-                                        <a href="#" onclick="editProduct('${product['ID_Producto']}', '${product['Nombre_del_producto']}', '${product.Precio}', '${product.Stock}')">Editar</a>
-                                        <a href="#" onclick="deleteProduct('${product['ID_Producto']}')">Borrar</a>
-                                    </div>
-                                </div>
-                           </td>
-                         </tr>`;
-            });
-            html += '</tbody></table>';
-            inventoryList.innerHTML = html;
-        } else {
-            inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
-        }
-    }
+    // Reemplaza la antigua loadInventory por esta
+async function loadInventory() {
+    const inventoryList = document.getElementById('inventory-list');
+    inventoryList.innerHTML = '<p>Cargando inventario...</p>';
     
+    // Si allProducts está vacío, lo cargamos. Si no, usamos los datos que ya tenemos.
+    if (allProducts.length === 0) {
+        await fetchProducts();
+    }
+
+    if (allProducts.length > 0) {
+        // Calculamos qué productos mostrar en la página actual
+        const startIndex = (currentPage - 1) * productsPerPage;
+        const endIndex = startIndex + productsPerPage;
+        const paginatedProducts = allProducts.slice(startIndex, endIndex);
+
+        let html = '<table class="inventory-table">';
+        html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th><th></th></tr></thead>';
+        html += '<tbody>';
+        paginatedProducts.forEach(product => {
+            html += `<tr>
+                       <td>${product['ID_Producto']}</td>
+                       <td>${product['Nombre_del_producto']}</td>
+                       <td>R$ ${product.Precio.toFixed(2)}</td>
+                       <td>${product.Stock}</td>
+                       <td>
+                            <div class="dropdown">
+                                <button class="dropbtn">...</button>
+                                <div class="dropdown-content">
+                                    <a href="#" onclick="editProduct('${product['ID_Producto']}', '${product['Nombre_del_producto']}', '${product.Precio}', '${product.Stock}')">Editar</a>
+                                    <a href="#" onclick="deleteProduct('${product['ID_Producto']}')">Borrar</a>
+                                </div>
+                            </div>
+                       </td>
+                     </tr>`;
+        });
+        html += '</tbody></table>';
+        inventoryList.innerHTML = html;
+
+        renderPaginationControls(); // Llamamos a la función que crea los botones
+    } else {
+        inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
+        document.getElementById('inventory-pagination').innerHTML = ''; // Limpiamos la paginación si no hay productos
+    }
+}
+
+function renderPaginationControls() {
+    const paginationContainer = document.getElementById('inventory-pagination');
+    const totalPages = Math.ceil(allProducts.length / productsPerPage);
+
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+
+    let html = `
+        <div class="pagination">
+            <button onclick="changePage(-1)" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Anterior</button>
+            <span>Página ${currentPage} de ${totalPages}</span>
+            <button onclick="changePage(1)" ${currentPage === totalPages ? 'disabled' : ''}>Siguiente &raquo;</button>
+        </div>
+    `;
+    paginationContainer.innerHTML = html;
+}
+
+function changePage(direction) {
+    const totalPages = Math.ceil(allProducts.length / productsPerPage);
+    
+    currentPage += direction;
+
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    loadInventory();
+}
+
     function editProduct(id, name, price, stock) {
         document.getElementById('addProductSection').style.display = 'none';
         document.getElementById('editProductSection').style.display = 'block';
@@ -852,28 +928,28 @@ async function loadPendingSales() {
         const groupedSales = await response.json();
         
         if (groupedSales.length > 0) {
+            let totalGeneralDebt = 0; 
             let html = '<h3>Deuda Total por Cliente</h3>';
+
             groupedSales.forEach((client, clientIndex) => {
+                totalGeneralDebt += client.deudaTotal; 
+
                 html += `
                     <div class="debt-container">
                         <div class="debt-client-header" onclick="toggleVisibility('client-sales-${clientIndex}')">
                             <h4>${client.nombreCliente} <span>(CPF/CNPJ: ${client.cpfCnpj})</span></h4>
-                            <span class="total-debt-amount">Deuda Total: R$ ${client.deudaTotal.toFixed(2)}</span>
+                            <span class="total-debt-amount">Deuda: R$ ${client.deudaTotal.toFixed(2)}</span>
                         </div>
                         
                         <div class="client-sales-container" id="client-sales-${clientIndex}" style="display: none;">
                             ${client.ventas.map((sale, saleIndex) => `
                                 <div class="sale-debt-item">
                                     <div class="sale-debt-header" onclick="toggleVisibility('sale-products-${clientIndex}-${saleIndex}')">
-                                        <span><strong>ID Venta:</strong> ${sale.id}</span>
-                                        <span><strong>Fecha:</strong> ${new Date(sale.fecha).toLocaleDateString()}</span>
-                                        <span><strong>Deuda:</strong> R$ ${sale.deudaRestante.toFixed(2)}</span>
+                                        <span>ID: ${sale.id} | Deuda: R$ ${sale.deudaRestante.toFixed(2)}</span>
+                                        <button class="btn-pay" onclick="event.stopPropagation(); showUniversalPaymentForm(${sale.id}, ${sale.deudaRestante}, 'debt-list')">Abonar</button>
                                     </div>
-                                    
                                     <div class="sale-products-container" id="sale-products-${clientIndex}-${saleIndex}" style="display: none;">
-                                        <ul>
-                                            ${sale.productos.map(p => `<li>${p.nombre} (${p.cantidad} unidad/es)</li>`).join('')}
-                                        </ul>
+                                        <ul>${sale.productos.map(p => `<li>${p.nombre} (${p.cantidad})</li>`).join('')}</ul>
                                     </div>
                                 </div>
                             `).join('')}
@@ -881,6 +957,8 @@ async function loadPendingSales() {
                     </div>
                 `;
             });
+
+            html += `<hr><div class="total-general-debt">Deuda Total General: R$ ${totalGeneralDebt.toFixed(2)}</div>`;
             debtList.innerHTML = html;
         } else {
             debtList.innerHTML = '<p>No hay cuentas pendientes en este momento.</p>';
@@ -1117,41 +1195,68 @@ function toggleVisibility(elementId) {
         }
     }
 
-    function showPaymentForm(saleId, currentDebt) {
-        const formId = `payment-form-${saleId}`;
-        const existingForm = document.getElementById(formId);
-        if (existingForm) {
-            existingForm.remove();
-            return;
-        }
 
-        const paymentForm = document.createElement('form');
-        paymentForm.id = formId;
-        paymentForm.className = 'sale-details-form';
-        paymentForm.onsubmit = (e) => {
-            e.preventDefault();
-            const amountInput = paymentForm.querySelector('input');
-            const amount = parseFloat(amountInput.value);
-            if (isNaN(amount) || amount <= 0 || amount > currentDebt) {
-                alert(`El monto debe ser un número positivo y no mayor a la deuda restante de R$ ${currentDebt.toFixed(2)}.`);
-                return;
-            }
-            handlePayment(saleId, amount);
-        };
-        
-        paymentForm.innerHTML = `
+function showUniversalPaymentForm(saleId, currentDebt, containerId) {
+    const formId = `payment-form-${saleId}`;
+    
+   
+    const existingForms = document.querySelectorAll('.universal-payment-form');
+    existingForms.forEach(form => form.remove());
+
+    const paymentForm = document.createElement('div'); 
+    paymentForm.id = formId;
+    paymentForm.className = 'sale-details-form universal-payment-form'; 
+    paymentForm.innerHTML = `
+        <form onsubmit="event.preventDefault(); handleUniversalPayment(${saleId}, ${currentDebt}, '${containerId}');">
             <div class="form-group">
-                <label for="payment-amount-${saleId}">Monto a pagar (Deuda: R$ ${currentDebt.toFixed(2)})</label>
+                <label for="payment-amount-${saleId}">Monto a abonar (Deuda: R$ ${currentDebt.toFixed(2)})</label>
                 <input type="number" id="payment-amount-${saleId}" step="0.01" min="0.01" max="${currentDebt}" required>
             </div>
             <button type="submit" class="btn-submit">Registrar Abono</button>
             <p id="payment-message-${saleId}" class="form-message"></p>
-        `;
-
-        const saleItem = document.querySelector(`.sale-item .btn-pay[onclick*="${saleId}"]`).closest('.sale-item');
-        saleItem.appendChild(paymentForm);
-    }
+        </form>
+    `;
     
+    document.getElementById(containerId).appendChild(paymentForm);
+}
+
+async function handleUniversalPayment(saleId, currentDebt, containerId) {
+    const paymentForm = document.getElementById(`payment-form-${saleId}`);
+    const amountInput = paymentForm.querySelector('input');
+    const paymentMessage = paymentForm.querySelector('p');
+    const amount = parseFloat(amountInput.value);
+
+    if (isNaN(amount) || amount <= 0 || amount > currentDebt) {
+        alert(`El monto debe ser un número positivo y no mayor a la deuda restante de R$ ${currentDebt.toFixed(2)}.`);
+        return;
+    }
+
+    paymentMessage.textContent = 'Registrando pago...';
+    paymentMessage.className = 'form-message';
+    showLoading();
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'addPayment');
+        formData.append('ID_Transaccion', saleId);
+        formData.append('Monto_Pago', amount);
+
+        const response = await fetch(scriptURL, { method: 'POST', body: formData });
+        const resultText = await response.text();
+
+        if (response.ok && !resultText.includes("Error")) {
+            alert('¡Pago registrado con éxito!');
+           
+            loadPendingSales();
+        } else {
+            alert(resultText || 'Error al registrar el pago.');
+        }
+    } catch (error) {
+        alert('Hubo un problema de conexión.');
+    } finally {
+        hideLoading();
+    }
+}
     function addProductField() {
         const productsListDiv = document.getElementById('products-list');
         const index = salesProducts.length;
@@ -1364,6 +1469,7 @@ function toggleVisibility(elementId) {
     }
     
     document.addEventListener('DOMContentLoaded', loadApp);
+
 </script>
 </body>
 </html>
