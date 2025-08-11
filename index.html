@@ -1182,48 +1182,41 @@
         }
     });
 
-    function showUniversalPaymentForm(event, saleId, currentDebt, containerId) {
-        // Código de depuración para la consola (F12)
-        console.log(`Función showUniversalPaymentForm llamada. ID de Venta: ${saleId}, Contenedor: ${containerId}`);
+function showUniversalPaymentForm(event, saleId, currentDebt, containerId) {
+    console.log(`Función showUniversalPaymentForm llamada. ID de Venta: ${saleId}, Contenedor: ${containerId}`);
 
-        const formId = `payment-form-${saleId}`;
-        
-        const existingForms = document.querySelectorAll('.universal-payment-form');
-        existingForms.forEach(form => form.remove());
+    const formId = `payment-form-${saleId}`;
+    const existingForms = document.querySelectorAll('.universal-payment-form');
+    existingForms.forEach(form => form.remove());
 
-        let paymentFormContainer;
-        if (containerId === 'debt-list') {
-            paymentFormContainer = event.target.closest('.sale-debt-item');
-        } else {
-            paymentFormContainer = document.getElementById('payment-form-container');
-        }
+    const parentElement = event.target.closest('.sale-item') || event.target.closest('.sale-debt-item');
 
-        if (!paymentFormContainer) {
-            console.error("Error: No se encontró el contenedor para el formulario de pago.");
-            return;
-        }
-        
-        const paymentForm = document.createElement('div'); 
-        paymentForm.id = formId;
-        paymentForm.className = 'sale-details-form universal-payment-form'; 
-        paymentForm.innerHTML = `
-            <form onsubmit="event.preventDefault(); handleUniversalPayment(${saleId}, ${currentDebt}, '${containerId}');">
-                <div class="form-group">
-                    <label for="payment-amount-${saleId}">Monto a abonar (Deuda: R$ ${currentDebt.toFixed(2)})</label>
-                    <input type="number" id="payment-amount-${saleId}" step="0.01" min="0.01" max="${currentDebt}" required>
-                </div>
-                <button type="submit" class="btn-submit">Registrar Abono</button>
-                <button type="button" class="btn-submit" style="background-color: var(--color-texto-secundario); margin-top: 10px;" onclick="this.closest('.universal-payment-form').remove()">Cancelar</button>
-                <p id="payment-message-${saleId}" class="form-message"></p>
-            </form>
-        `;
-        
-        if (containerId === 'debt-list') {
-             paymentFormContainer.appendChild(paymentForm);
-        } else {
-            paymentFormContainer.prepend(paymentForm);
-        }
+    if (!parentElement) {
+        console.error("Error: No se encontró el contenedor para el formulario de pago.");
+        return;
     }
+    
+    const paymentForm = document.createElement('div'); 
+    paymentForm.id = formId;
+    paymentForm.className = 'sale-details-form universal-payment-form'; 
+    paymentForm.innerHTML = `
+        <form onsubmit="event.preventDefault(); handleUniversalPayment(${saleId}, ${currentDebt}, '${containerId}');">
+            <div class="form-group">
+                <label for="payment-amount-${saleId}">Monto a abonar (Deuda: R$ ${currentDebt.toFixed(2)})</label>
+                <input type="number" id="payment-amount-${saleId}" step="0.01" min="0.01" max="${currentDebt}" required>
+            </div>
+            <button type="submit" class="btn-submit">Registrar Abono</button>
+            <button type="button" class="btn-submit" style="background-color: var(--color-texto-secundario); margin-top: 10px;" onclick="this.closest('.universal-payment-form').remove()">Cancelar</button>
+            <p id="payment-message-${saleId}" class="form-message"></p>
+        </form>
+    `;
+    
+    // Agrega el formulario justo dentro del elemento padre que encontramos
+    parentElement.appendChild(paymentForm);
+
+    // *** MEJORA ADICIONAL: Desplaza la pantalla para que el formulario sea visible ***
+    paymentForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
     async function handleUniversalPayment(saleId, currentDebt, containerId) {
         const paymentForm = document.getElementById(`payment-form-${saleId}`);
