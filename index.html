@@ -420,6 +420,52 @@
         height: 60px !important; /* Hacemos el logo de la esquina un poco más pequeño */
     }
 }
+/* Añade esto al final de tu <style> en index.html */
+.debt-container {
+    margin-bottom: 10px;
+}
+
+.debt-client-header h4 span {
+    color: var(--color-texto-secundario);
+    font-size: 0.9em;
+    font-weight: 400;
+}
+
+.total-debt-amount {
+    font-weight: 600;
+    color: var(--color-peligro);
+}
+
+.client-sales-container {
+    padding-left: 20px;
+    border-left: 2px solid var(--color-borde);
+    margin-top: 5px;
+}
+
+.sale-debt-item {
+    margin: 5px 0;
+}
+
+.sale-debt-header {
+    background-color: var(--color-fondo);
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    transition: background-color 0.2s;
+    border: 1px solid var(--color-borde);
+}
+
+.sale-debt-header:hover {
+    background-color: #1e242c;
+}
+
+.sale-products-container {
+    padding: 10px 10px 10px 30px;
+    background-color: var(--color-fondo);
+    border-radius: 0 0 5px 5px;
+}
 </style>
 </head>
 <body>
@@ -797,48 +843,62 @@
         }
     }
 
-    async function loadPendingSales() {
-        const debtList = document.getElementById('debt-list');
-        debtList.innerHTML = '<p>Cargando cuentas pendientes...</p>';
-        showLoading();
-        try {
-            const response = await fetch(scriptURL + '?action=getPendingSales');
-            const groupedSales = await response.json();
-            if (groupedSales.length > 0) {
-                let html = '<h3>Deuda Total por Cliente</h3>';
-                groupedSales.forEach((clientDebt, index) => {
-                    html += `
-                        <div class="debt-client-header" onclick="toggleDebtDetails('debt-details-${index}')">
-                            <h4>${clientDebt.nombreCliente}</h4>
-                            <span>Deuda Total: R$ ${clientDebt.deudaTotal.toFixed(2)}</span>
+async function loadPendingSales() {
+    const debtList = document.getElementById('debt-list');
+    debtList.innerHTML = '<p>Cargando cuentas pendientes...</p>';
+    showLoading();
+    try {
+        const response = await fetch(scriptURL + '?action=getPendingSales');
+        const groupedSales = await response.json();
+        
+        if (groupedSales.length > 0) {
+            let html = '<h3>Deuda Total por Cliente</h3>';
+            groupedSales.forEach((client, clientIndex) => {
+                html += `
+                    <div class="debt-container">
+                        <div class="debt-client-header" onclick="toggleVisibility('client-sales-${clientIndex}')">
+                            <h4>${client.nombreCliente} <span>(CPF/CNPJ: ${client.cpfCnpj})</span></h4>
+                            <span class="total-debt-amount">Deuda Total: R$ ${client.deudaTotal.toFixed(2)}</span>
                         </div>
-                        <div class="debt-details" id="debt-details-${index}">
-                            ${clientDebt.ventas.map(sale => `
-                                <p><strong>ID Venta:</strong> ${sale.id} | <strong>Fecha:</strong> ${new Date(sale.fecha).toLocaleDateString()} | <strong>Deuda:</strong> R$ ${sale.deudaRestante.toFixed(2)}</p>
+                        
+                        <div class="client-sales-container" id="client-sales-${clientIndex}" style="display: none;">
+                            ${client.ventas.map((sale, saleIndex) => `
+                                <div class="sale-debt-item">
+                                    <div class="sale-debt-header" onclick="toggleVisibility('sale-products-${clientIndex}-${saleIndex}')">
+                                        <span><strong>ID Venta:</strong> ${sale.id}</span>
+                                        <span><strong>Fecha:</strong> ${new Date(sale.fecha).toLocaleDateString()}</span>
+                                        <span><strong>Deuda:</strong> R$ ${sale.deudaRestante.toFixed(2)}</span>
+                                    </div>
+                                    
+                                    <div class="sale-products-container" id="sale-products-${clientIndex}-${saleIndex}" style="display: none;">
+                                        <ul>
+                                            ${sale.productos.map(p => `<li>${p.nombre} (${p.cantidad} unidad/es)</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                </div>
                             `).join('')}
                         </div>
-                    `;
-                });
-                debtList.innerHTML = html;
-            } else {
-                debtList.innerHTML = '<p>No hay cuentas pendientes en este momento.</p>';
-            }
-        } catch (error) {
-            console.error("Error al cargar las cuentas pendientes:", error);
-            debtList.innerHTML = '<p>Error al cargar las cuentas pendientes. Asegúrate de que las columnas en tu hoja "Ventas" están escritas correctamente.</p>';
-        } finally {
-            hideLoading();
-        }
-    }
-    
-    function toggleDebtDetails(detailsId) {
-        const details = document.getElementById(detailsId);
-        if (details.style.display === 'block') {
-            details.style.display = 'none';
+                    </div>
+                `;
+            });
+            debtList.innerHTML = html;
         } else {
-            details.style.display = 'block';
+            debtList.innerHTML = '<p>No hay cuentas pendientes en este momento.</p>';
         }
+    } catch (error) {
+        console.error("Error al cargar las cuentas pendientes:", error);
+        debtList.innerHTML = '<p>Error al cargar las cuentas pendientes.</p>';
+    } finally {
+        hideLoading();
     }
+}
+    
+function toggleVisibility(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.style.display = element.style.display === 'block' ? 'none' : 'block';
+    }
+}
 
     if (document.getElementById('customerForm')) {
       const customerForm = document.getElementById('customerForm');
