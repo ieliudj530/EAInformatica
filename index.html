@@ -193,6 +193,7 @@
         font-weight: 600;
         opacity: 0;
         transition: opacity 0.5s ease-in-out;
+        min-height: 20px;
     }
 
     .form-message.success { color: var(--color-exito); opacity: 1; }
@@ -440,6 +441,7 @@
     padding-left: 20px;
     border-left: 2px solid var(--color-borde);
     margin-top: 5px;
+    display: none;
 }
 
 .sale-debt-item {
@@ -465,6 +467,11 @@
     padding: 10px 10px 10px 30px;
     background-color: var(--color-fondo);
     border-radius: 0 0 5px 5px;
+    display: none;
+}
+.sale-products-container ul {
+    margin: 0;
+    padding-left: 20px;
 }
 
 .total-general-debt {
@@ -561,14 +568,13 @@
 
         <h4>3.1 Agregar Producto</h4>
         <ul>
-            <li>Si el producto <strong>ya existe</strong>, solo se suma stock. Precio no es obligatorio.</li>
-            <li>Si el producto <strong>es nuevo</strong>, completa nombre, precio y stock.</li>
+            <li>Si el producto <strong>es nuevo</strong>, completa nombre, precio y stock. El sistema no permite agregar productos con nombres duplicados.</li>
         </ul>
 
         <h4>3.2 Editar o Eliminar</h4>
         <ul>
             <li>Usa el menú <code>...</code> junto al producto.</li>
-            <li>"Editar" permite modificar nombre, precio y stock.</li>
+            <li>"Editar" permite modificar nombre, precio y añadir o quitar stock.</li>
             <li>"Borrar" elimina el producto permanentemente.</li>
         </ul>
     </div>
@@ -668,7 +674,7 @@
             <div id="inventory-list">
                 </div>
             
-            <div id="inventory-pagination"></div> 
+            <div id="inventory-pagination" class="pagination"></div> 
             
             <div class="inventory-form-section" id="addProductSection">
                 <form id="addProductForm">
@@ -682,7 +688,7 @@
                         <input type="number" id="product-price" name="Precio" step="0.01" min="0" required>
                     </div>
                     <div class="form-group">
-                        <label for="product-stock">Stock a añadir</label>
+                        <label for="product-stock">Stock Inicial</label>
                         <input type="number" id="product-stock" name="Stock" min="0" required>
                     </div>
                     <button type="submit" class="btn-submit">Agregar Producto</button>
@@ -691,7 +697,7 @@
             </div>
             
             <div class="inventory-form-section" id="editProductSection" style="display:none;">
-                <form id="editProductForm" onsubmit="return false;">
+                <form id="editProductForm">
                     <h3>Editar Producto</h3>
                     <input type="hidden" id="edit-product-id">
                     <div class="form-group">
@@ -704,7 +710,7 @@
                     </div>
                     <div class="form-group">
                         <label for="edit-stock-amount">Cantidad a Modificar (ej: 10 para agregar, -5 para quitar)</label>
-                        <input type="number" id="edit-stock-amount" min="1" required placeholder="Ej: 10">
+                        <input type="number" id="edit-stock-amount" required placeholder="Introduce un número positivo">
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
                         <button type="button" class="btn-add" style="width: 50%;" onclick="handleStockUpdate('add')">Agregar Stock</button>
@@ -765,9 +771,11 @@
             const productsResponse = await fetch(scriptURL + '?action=getProducts');
             if (!productsResponse.ok) throw new Error('Error al obtener los productos.');
             allProducts = await productsResponse.json();
+            // Ordenar productos alfabéticamente por nombre
+            allProducts.sort((a, b) => a['Nombre_del_producto'].localeCompare(b['Nombre_del_producto']));
         } catch (error) {
             console.error("Error al cargar los productos:", error);
-            allProducts = []; // Asegura que allProducts sea un array vacío si falla
+            allProducts = [];
         } finally {
             hideLoading();
         }
@@ -787,99 +795,104 @@
         if (button) {
             button.className += " active";
         }
+
+        // Acciones específicas por pestaña
         if (tabName === 'inventoryTab') {
+            currentPage = 1; // Reiniciar paginación
             loadInventory();
-            document.getElementById('addProductSection').style.display = 'block';
-            document.getElementById('editProductSection').style.display = 'none';
+            cancelEdit(); // Asegurarse de que el formulario de edición esté oculto
         } else if (tabName === 'debtTab') {
             loadPendingSales();
+        } else if (tabName === 'searchTab') {
+            document.getElementById('results-container').innerHTML = '';
+            document.getElementById('search-message').textContent = '';
+        } else if (tabName === 'clientTab') {
+            document.getElementById('form-message').textContent = '';
         }
     }
 
-    // Reemplaza la antigua loadInventory por esta
-async function loadInventory() {
-    const inventoryList = document.getElementById('inventory-list');
-    inventoryList.innerHTML = '<p>Cargando inventario...</p>';
-    
-    // Si allProducts está vacío, lo cargamos. Si no, usamos los datos que ya tenemos.
-    if (allProducts.length === 0) {
-        await fetchProducts();
-    }
+    async function loadInventory() {
+        const inventoryList = document.getElementById('inventory-list');
+        inventoryList.innerHTML = '<p>Cargando inventario...</p>';
+        
+        if (allProducts.length === 0) {
+            await fetchProducts();
+        }
 
-    if (allProducts.length > 0) {
-        // Calculamos qué productos mostrar en la página actual
-        const startIndex = (currentPage - 1) * productsPerPage;
-        const endIndex = startIndex + productsPerPage;
-        const paginatedProducts = allProducts.slice(startIndex, endIndex);
+        if (allProducts.length > 0) {
+            const startIndex = (currentPage - 1) * productsPerPage;
+            const endIndex = startIndex + productsPerPage;
+            const paginatedProducts = allProducts.slice(startIndex, endIndex);
 
-        let html = '<table class="inventory-table">';
-        html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th><th></th></tr></thead>';
-        html += '<tbody>';
-        paginatedProducts.forEach(product => {
-            html += `<tr>
-                       <td>${product['ID_Producto']}</td>
-                       <td>${product['Nombre_del_producto']}</td>
-                       <td>R$ ${product.Precio.toFixed(2)}</td>
-                       <td>${product.Stock}</td>
-                       <td>
-                            <div class="dropdown">
-                                <button class="dropbtn">...</button>
-                                <div class="dropdown-content">
-                                    <a href="#" onclick="editProduct('${product['ID_Producto']}', '${product['Nombre_del_producto']}', '${product.Precio}', '${product.Stock}')">Editar</a>
-                                    <a href="#" onclick="deleteProduct('${product['ID_Producto']}')">Borrar</a>
+            let html = '<table class="inventory-table">';
+            html += '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th><th></th></tr></thead>';
+            html += '<tbody>';
+            paginatedProducts.forEach(product => {
+                const stockColor = product.Stock <= 5 ? 'style="color: var(--color-peligro); font-weight: bold;"' : '';
+                html += `<tr>
+                           <td>${product['ID_Producto']}</td>
+                           <td>${product['Nombre_del_producto']}</td>
+                           <td>R$ ${product.Precio.toFixed(2)}</td>
+                           <td ${stockColor}>${product.Stock}</td>
+                           <td>
+                                <div class="dropdown">
+                                    <button class="dropbtn">...</button>
+                                    <div class="dropdown-content">
+                                        <a href="#" onclick="editProduct('${product['ID_Producto']}')">Editar</a>
+                                        <a href="#" onclick="deleteProduct('${product['ID_Producto']}')">Borrar</a>
+                                    </div>
                                 </div>
-                            </div>
-                       </td>
-                     </tr>`;
-        });
-        html += '</tbody></table>';
-        inventoryList.innerHTML = html;
+                           </td>
+                         </tr>`;
+            });
+            html += '</tbody></table>';
+            inventoryList.innerHTML = html;
 
-        renderPaginationControls(); // Llamamos a la función que crea los botones
-    } else {
-        inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
-        document.getElementById('inventory-pagination').innerHTML = ''; // Limpiamos la paginación si no hay productos
-    }
-}
-
-function renderPaginationControls() {
-    const paginationContainer = document.getElementById('inventory-pagination');
-    const totalPages = Math.ceil(allProducts.length / productsPerPage);
-
-    if (totalPages <= 1) {
-        paginationContainer.innerHTML = '';
-        return;
+            renderPaginationControls();
+        } else {
+            inventoryList.innerHTML = '<p>No hay productos en el inventario.</p>';
+            document.getElementById('inventory-pagination').innerHTML = '';
+        }
     }
 
-    let html = `
-        <div class="pagination">
+    function renderPaginationControls() {
+        const paginationContainer = document.getElementById('inventory-pagination');
+        const totalPages = Math.ceil(allProducts.length / productsPerPage);
+
+        if (totalPages <= 1) {
+            paginationContainer.innerHTML = '';
+            return;
+        }
+
+        let html = `
             <button onclick="changePage(-1)" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Anterior</button>
             <span>Página ${currentPage} de ${totalPages}</span>
             <button onclick="changePage(1)" ${currentPage === totalPages ? 'disabled' : ''}>Siguiente &raquo;</button>
-        </div>
-    `;
-    paginationContainer.innerHTML = html;
-}
+        `;
+        paginationContainer.innerHTML = html;
+    }
 
-function changePage(direction) {
-    const totalPages = Math.ceil(allProducts.length / productsPerPage);
-    
-    currentPage += direction;
+    function changePage(direction) {
+        const totalPages = Math.ceil(allProducts.length / productsPerPage);
+        currentPage += direction;
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        loadInventory();
+    }
 
-    if (currentPage < 1) currentPage = 1;
-    if (currentPage > totalPages) currentPage = totalPages;
+    function editProduct(id) {
+        const product = allProducts.find(p => p['ID_Producto'] == id);
+        if (!product) return;
 
-    loadInventory();
-}
-
-    function editProduct(id, name, price, stock) {
         document.getElementById('addProductSection').style.display = 'none';
         document.getElementById('editProductSection').style.display = 'block';
         
-        document.getElementById('edit-product-id').value = id;
-        document.getElementById('edit-product-name').value = name;
-        document.getElementById('edit-product-price').value = price;
-        document.getElementById('edit-product-stock').value = 0;
+        document.getElementById('edit-product-id').value = product['ID_Producto'];
+        document.getElementById('edit-product-name').value = product['Nombre_del_producto'];
+        document.getElementById('edit-product-price').value = product.Precio;
+        document.getElementById('edit-stock-amount').value = '';
+        document.getElementById('edit-product-message').textContent = '';
+        window.scrollTo(0, document.body.scrollHeight);
     }
     
     function cancelEdit() {
@@ -902,15 +915,12 @@ function changePage(direction) {
             const response = await fetch(scriptURL, { method: 'POST', body: formData });
             const resultText = await response.text();
             
-            if (response.ok) {
-                if (resultText.includes("Error")) {
-                    alert(resultText);
-                } else {
-                    alert('Producto eliminado con éxito.');
-                    loadInventory();
-                }
+            if (response.ok && !resultText.includes("Error")) {
+                alert('Producto eliminado con éxito.');
+                await fetchProducts();
+                loadInventory();
             } else {
-                alert('Error al procesar la solicitud.');
+                alert(resultText || 'Error al procesar la solicitud.');
             }
         } catch (error) {
             alert('Hubo un problema de conexión.');
@@ -919,107 +929,103 @@ function changePage(direction) {
         }
     }
 
-async function loadPendingSales() {
-    const debtList = document.getElementById('debt-list');
-    debtList.innerHTML = '<p>Cargando cuentas pendientes...</p>';
-    showLoading();
-    try {
-        const response = await fetch(scriptURL + '?action=getPendingSales');
-        const groupedSales = await response.json();
-        
-        if (groupedSales.length > 0) {
-            let totalGeneralDebt = 0; 
-            let html = '<h3>Deuda Total por Cliente</h3>';
+    async function loadPendingSales() {
+        const debtList = document.getElementById('debt-list');
+        debtList.innerHTML = '<p>Cargando cuentas pendientes...</p>';
+        showLoading();
+        try {
+            const response = await fetch(scriptURL + '?action=getPendingSales');
+            const groupedSales = await response.json();
+            
+            if (groupedSales.length > 0) {
+                let totalGeneralDebt = 0;
+                let html = '<h3>Deuda Total por Cliente</h3>';
+                
+                // Ordenar clientes por nombre
+                groupedSales.sort((a,b) => a.nombreCliente.localeCompare(b.nombreCliente));
 
-            groupedSales.forEach((client, clientIndex) => {
-                totalGeneralDebt += client.deudaTotal; 
+                groupedSales.forEach((client, clientIndex) => {
+                    totalGeneralDebt += client.deudaTotal; 
 
-                html += `
-                    <div class="debt-container">
-                        <div class="debt-client-header" onclick="toggleVisibility('client-sales-${clientIndex}')">
-                            <h4>${client.nombreCliente} <span>(CPF/CNPJ: ${client.cpfCnpj})</span></h4>
-                            <span class="total-debt-amount">Deuda: R$ ${client.deudaTotal.toFixed(2)}</span>
-                        </div>
-                        
-                        <div class="client-sales-container" id="client-sales-${clientIndex}" style="display: none;">
-                            ${client.ventas.map((sale, saleIndex) => `
-                                <div class="sale-debt-item">
-                                    <div class="sale-debt-header" onclick="toggleVisibility('sale-products-${clientIndex}-${saleIndex}')">
-                                        <span>ID: ${sale.id} | Deuda: R$ ${sale.deudaRestante.toFixed(2)}</span>
-                                        <button class="btn-pay" onclick="event.stopPropagation(); showUniversalPaymentForm(${sale.id}, ${sale.deudaRestante}, 'debt-list')">Abonar</button>
+                    html += `
+                        <div class="debt-container">
+                            <div class="debt-client-header" onclick="toggleVisibility('client-sales-${clientIndex}')">
+                                <h4>${client.nombreCliente} <span>(ID: ${client.id} | CPF/CNPJ: ${client.cpfCnpj})</span></h4>
+                                <span class="total-debt-amount">Deuda: R$ ${client.deudaTotal.toFixed(2)}</span>
+                            </div>
+                            
+                            <div class="client-sales-container" id="client-sales-${clientIndex}">
+                                ${client.ventas.map((sale, saleIndex) => `
+                                    <div class="sale-debt-item">
+                                        <div class="sale-debt-header" onclick="toggleVisibility('sale-products-${clientIndex}-${saleIndex}')">
+                                            <span>ID Venta: ${sale.id} | Deuda: R$ ${sale.deudaRestante.toFixed(2)} | Fecha: ${new Date(sale.fecha).toLocaleDateString()}</span>
+                                            <button class="btn-pay" onclick="event.stopPropagation(); showUniversalPaymentForm(${sale.id}, ${sale.deudaRestante}, 'debt-list')">Abonar</button>
+                                        </div>
+                                        <div class="sale-products-container" id="sale-products-${clientIndex}-${saleIndex}">
+                                            <ul>${sale.productos.map(p => `<li>${p.cantidad}x ${p.nombre}</li>`).join('')}</ul>
+                                        </div>
                                     </div>
-                                    <div class="sale-products-container" id="sale-products-${clientIndex}-${saleIndex}" style="display: none;">
-                                        <ul>${sale.productos.map(p => `<li>${p.nombre} (${p.cantidad})</li>`).join('')}</ul>
-                                    </div>
-                                </div>
-                            `).join('')}
+                                `).join('')}
+                            </div>
                         </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
 
-            html += `<hr><div class="total-general-debt">Deuda Total General: R$ ${totalGeneralDebt.toFixed(2)}</div>`;
-            debtList.innerHTML = html;
-        } else {
-            debtList.innerHTML = '<p>No hay cuentas pendientes en este momento.</p>';
+                html += `<hr><div class="total-general-debt">Deuda Total General: R$ ${totalGeneralDebt.toFixed(2)}</div>`;
+                debtList.innerHTML = html;
+            } else {
+                debtList.innerHTML = '<p>No hay cuentas pendientes en este momento.</p>';
+            }
+        } catch (error) {
+            console.error("Error al cargar las cuentas pendientes:", error);
+            debtList.innerHTML = '<p>Error al cargar las cuentas pendientes.</p>';
+        } finally {
+            hideLoading();
         }
-    } catch (error) {
-        console.error("Error al cargar las cuentas pendientes:", error);
-        debtList.innerHTML = '<p>Error al cargar las cuentas pendientes.</p>';
-    } finally {
-        hideLoading();
     }
-}
     
-function toggleVisibility(elementId) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.style.display = element.style.display === 'block' ? 'none' : 'block';
+    function toggleVisibility(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.style.display = element.style.display === 'block' ? 'none' : 'block';
+        }
     }
-}
 
-    if (document.getElementById('customerForm')) {
-      const customerForm = document.getElementById('customerForm');
-      const customerMessage = document.getElementById('form-message');
-      customerForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          customerMessage.textContent = 'Enviando...';
-          customerMessage.className = 'form-message';
-          showLoading();
-          try {
-              const formData = new FormData(customerForm);
-              // Agrega la fecha actual automáticamente
-              formData.append('Fecha', new Date().toISOString());
-              const response = await fetch(scriptURL, { method: 'POST', body: formData });
-              const resultText = await response.text();
-              if (response.ok) {
-                  if (resultText.includes("Error")) {
-                      customerMessage.textContent = resultText;
-                      customerMessage.className = 'form-message error';
-                  } else {
-                      customerMessage.textContent = '¡Cliente registrado con éxito!';
-                      customerMessage.className = 'form-message success';
-                      customerForm.reset();
-                  }
-              } else {
-                  customerMessage.textContent = 'Error al registrar el cliente.';
-                  customerMessage.className = 'form-message error';
-              }
-          } catch (error) {
-              customerMessage.textContent = 'Hubo un problema de conexión.';
-              customerMessage.className = 'form-message error';
-          } finally {
-              hideLoading();
-          }
-      });
-    }
+    const customerForm = document.getElementById('customerForm');
+    const customerMessage = document.getElementById('form-message');
+    customerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        customerMessage.textContent = 'Enviando...';
+        customerMessage.className = 'form-message';
+        showLoading();
+        try {
+            const formData = new FormData(customerForm);
+            formData.append('Fecha', new Date().toISOString());
+            const response = await fetch(scriptURL, { method: 'POST', body: formData });
+            const resultText = await response.text();
+            
+            if (response.ok && !resultText.includes("Error")) {
+                customerMessage.textContent = '¡Cliente registrado con éxito!';
+                customerMessage.className = 'form-message success';
+                customerForm.reset();
+            } else {
+                customerMessage.textContent = resultText || 'Error al registrar el cliente.';
+                customerMessage.className = 'form-message error';
+            }
+        } catch (error) {
+            customerMessage.textContent = 'Hubo un problema de conexión.';
+            customerMessage.className = 'form-message error';
+        } finally {
+            hideLoading();
+        }
+    });
 
     const searchForm = document.getElementById('searchForm');
-    const searchMessage = document.getElementById('search-message');
-    const resultsContainer = document.getElementById('results-container');
-
     searchForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const resultsContainer = document.getElementById('results-container');
+        const searchMessage = document.getElementById('search-message');
+        
         resultsContainer.innerHTML = '';
         searchMessage.textContent = 'Buscando...';
         searchMessage.className = 'form-message';
@@ -1027,7 +1033,7 @@ function toggleVisibility(elementId) {
         const searchCpfCnpj = document.getElementById('search-cpf').value;
 
         try {
-            const url = scriptURL + '?action=search&CPF/CNPJ=' + searchCpfCnpj;
+            const url = `${scriptURL}?action=search&CPF/CNPJ=${encodeURIComponent(searchCpfCnpj)}`;
             const response = await fetch(url);
             const data = await response.json();
             
@@ -1046,11 +1052,11 @@ function toggleVisibility(elementId) {
                                    <span class="result-label">Deuda:</span> R$ ${sale.deudaRestante.toFixed(2)}</p>
                                    <p><span class="result-label">Fecha:</span> ${new Date(sale.fecha).toLocaleDateString()}
                                    <button onclick="toggleSaleDetails(this)">+</button>
-                                   ${sale.estado === 'Pendiente' ? `<button class="btn-pay" onclick="showPaymentForm(${sale.id}, ${sale.deudaRestante})">Pagar</button>` : `<span style="color:#4CAF50; font-weight:bold;">(${sale.estado})</span>`}</p>
+                                   ${sale.estado === 'Pendiente' ? `<button class="btn-pay" onclick="showUniversalPaymentForm(${sale.id}, ${sale.deudaRestante}, 'results-container')">Pagar</button>` : `<span style="color:var(--color-exito); font-weight:bold;">(${sale.estado})</span>`}</p>
                                    
                                    <div class="sale-details" style="display:none;">
                                         <ul>
-                                            ${sale.productos.map(p => `<li>${p.nombre} (${p.cantidad} unidad/es)</li>`).join('')}
+                                            ${sale.productos.map(p => `<li>${p.cantidad}x ${p.nombre}</li>`).join('')}
                                         </ul>
                                    </div>
                                </li>
@@ -1066,10 +1072,12 @@ function toggleVisibility(elementId) {
                     <p><span class="result-label">Dirección:</span> ${data.Direccion || 'N/A'}</p>
                     <p><span class="result-label">Fecha de Registro:</span> ${new Date(data.Fecha).toLocaleDateString()}</p>
                     <hr>
-                    <p class="total-debt-info"><strong>Deuda Total Pendiente: R$ ${data.totalDebt}</strong></p>
+                    <p class="total-debt-info"><strong>Deuda Total Pendiente: R$ ${data.totalDebt.toFixed(2)}</strong></p>
                     
+                    <div id="payment-form-container"></div>
+
                     <div style="margin-top: 20px;">
-                        <h3 style="color: #8e24aa;">Registrar Nueva Venta para ${data.Nome}</h3>
+                        <h3 style="color: var(--color-primario);">Registrar Nueva Venta para ${data.Nome}</h3>
                         <form id="saleForm">
                             <input type="hidden" name="action" value="addSale">
                             <input type="hidden" name="CPF/CNPJ" value="${data['CPF/CNPJ']}">
@@ -1094,10 +1102,11 @@ function toggleVisibility(elementId) {
                 `;
                 salesProducts = [];
                 addProductField();
+                
                 const saleForm = document.getElementById('saleForm');
-                const saleMessage = document.getElementById('sale-message');
                 saleForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    const saleMessage = document.getElementById('sale-message');
                     saleMessage.textContent = 'Calculando y enviando...';
                     saleMessage.className = 'form-message';
                     showLoading();
@@ -1121,24 +1130,17 @@ function toggleVisibility(elementId) {
 
                     try {
                         const formData = new FormData(saleForm);
-                        // Agrega la fecha actual automáticamente
                         formData.append('Fecha', new Date().toISOString());
                         const response = await fetch(scriptURL, { method: 'POST', body: formData });
                         const resultText = await response.text();
-                        if (response.ok) {
-                            if (resultText.includes("Error")) {
-                                saleMessage.textContent = resultText;
-                                saleMessage.className = 'form-message error';
-                            } else {
-                                saleMessage.textContent = '¡Venta registrada con éxito!';
-                                saleMessage.className = 'form-message success';
-                                saleForm.reset();
-                                salesProducts = [];
-                                resultsContainer.innerHTML = '';
-                                searchForm.dispatchEvent(new Event('submit'));
-                            }
+                        
+                        if (response.ok && !resultText.includes("Error")) {
+                            saleMessage.textContent = '¡Venta registrada con éxito!';
+                            saleMessage.className = 'form-message success';
+                            await fetchProducts(); // Actualizar stock
+                            searchForm.dispatchEvent(new Event('submit')); // Recargar cliente
                         } else {
-                            saleMessage.textContent = 'Error al registrar la venta.';
+                            saleMessage.textContent = resultText || 'Error al registrar la venta.';
                             saleMessage.className = 'form-message error';
                         }
                     } catch (error) {
@@ -1160,118 +1162,113 @@ function toggleVisibility(elementId) {
             hideLoading();
         }
     });
-    
-    async function handlePayment(saleId, paymentAmount) {
-        const paymentMessage = document.getElementById(`payment-message-${saleId}`);
+
+    function showUniversalPaymentForm(saleId, currentDebt, containerId) {
+        const formId = `payment-form-${saleId}`;
+        
+        // Eliminar formularios de pago abiertos
+        const existingForms = document.querySelectorAll('.universal-payment-form');
+        existingForms.forEach(form => form.remove());
+
+        const paymentFormContainer = document.getElementById('payment-form-container') || document.getElementById(containerId);
+        if (!paymentFormContainer) return;
+        
+        const paymentForm = document.createElement('div'); 
+        paymentForm.id = formId;
+        paymentForm.className = 'sale-details-form universal-payment-form'; 
+        paymentForm.innerHTML = `
+            <form onsubmit="event.preventDefault(); handleUniversalPayment(${saleId}, ${currentDebt}, '${containerId}');">
+                <div class="form-group">
+                    <label for="payment-amount-${saleId}">Monto a abonar (Deuda: R$ ${currentDebt.toFixed(2)})</label>
+                    <input type="number" id="payment-amount-${saleId}" step="0.01" min="0.01" max="${currentDebt}" required>
+                </div>
+                <button type="submit" class="btn-submit">Registrar Abono</button>
+                <button type="button" class="btn-submit" style="background-color: var(--color-texto-secundario); margin-top: 10px;" onclick="this.closest('.universal-payment-form').remove()">Cancelar</button>
+                <p id="payment-message-${saleId}" class="form-message"></p>
+            </form>
+        `;
+        
+        if (containerId === 'debt-list') {
+             const saleItem = event.target.closest('.sale-debt-item');
+             saleItem.appendChild(paymentForm);
+        } else {
+            paymentFormContainer.prepend(paymentForm);
+        }
+    }
+
+    async function handleUniversalPayment(saleId, currentDebt, containerId) {
+        const paymentForm = document.getElementById(`payment-form-${saleId}`);
+        const amountInput = paymentForm.querySelector('input');
+        const paymentMessage = paymentForm.querySelector('p');
+        const amount = parseFloat(amountInput.value);
+
+        if (isNaN(amount) || amount <= 0) {
+            alert(`El monto debe ser un número positivo.`);
+            return;
+        }
+
+        if (amount > currentDebt && Math.abs(amount - currentDebt) > 0.01) {
+            alert(`El monto del pago es mayor que la deuda restante de R$ ${currentDebt.toFixed(2)}.`);
+            return;
+        }
+
         paymentMessage.textContent = 'Registrando pago...';
         paymentMessage.className = 'form-message';
         showLoading();
+
         try {
             const formData = new FormData();
             formData.append('action', 'addPayment');
             formData.append('ID_Transaccion', saleId);
-            formData.append('Monto_Pago', paymentAmount);
+            formData.append('Monto_Pago', amount);
 
             const response = await fetch(scriptURL, { method: 'POST', body: formData });
             const resultText = await response.text();
-            if (response.ok) {
-                if (resultText.includes("Error")) {
-                    paymentMessage.textContent = resultText;
-                    paymentMessage.className = 'form-message error';
+
+            if (response.ok && !resultText.includes("Error")) {
+                alert('¡Pago registrado con éxito!');
+                if (containerId === 'debt-list') {
+                    loadPendingSales();
                 } else {
-                    paymentMessage.textContent = '¡Pago registrado con éxito!';
-                    paymentMessage.className = 'form-message success';
-                    searchForm.dispatchEvent(new Event('submit'));
+                    document.getElementById('searchForm').dispatchEvent(new Event('submit'));
                 }
             } else {
-                paymentMessage.textContent = 'Error al registrar el pago.';
-                paymentMessage.className = 'form-message error';
+                alert(resultText || 'Error al registrar el pago.');
             }
         } catch (error) {
-            paymentMessage.textContent = 'Hubo un problema de conexión.';
-            paymentMessage.className = 'form-message error';
+            alert('Hubo un problema de conexión.');
         } finally {
             hideLoading();
         }
     }
 
-
-function showUniversalPaymentForm(saleId, currentDebt, containerId) {
-    const formId = `payment-form-${saleId}`;
-    
-   
-    const existingForms = document.querySelectorAll('.universal-payment-form');
-    existingForms.forEach(form => form.remove());
-
-    const paymentForm = document.createElement('div'); 
-    paymentForm.id = formId;
-    paymentForm.className = 'sale-details-form universal-payment-form'; 
-    paymentForm.innerHTML = `
-        <form onsubmit="event.preventDefault(); handleUniversalPayment(${saleId}, ${currentDebt}, '${containerId}');">
-            <div class="form-group">
-                <label for="payment-amount-${saleId}">Monto a abonar (Deuda: R$ ${currentDebt.toFixed(2)})</label>
-                <input type="number" id="payment-amount-${saleId}" step="0.01" min="0.01" max="${currentDebt}" required>
-            </div>
-            <button type="submit" class="btn-submit">Registrar Abono</button>
-            <p id="payment-message-${saleId}" class="form-message"></p>
-        </form>
-    `;
-    
-    document.getElementById(containerId).appendChild(paymentForm);
-}
-
-async function handleUniversalPayment(saleId, currentDebt, containerId) {
-    const paymentForm = document.getElementById(`payment-form-${saleId}`);
-    const amountInput = paymentForm.querySelector('input');
-    const paymentMessage = paymentForm.querySelector('p');
-    const amount = parseFloat(amountInput.value);
-
-    if (isNaN(amount) || amount <= 0 || amount > currentDebt) {
-        alert(`El monto debe ser un número positivo y no mayor a la deuda restante de R$ ${currentDebt.toFixed(2)}.`);
-        return;
-    }
-
-    paymentMessage.textContent = 'Registrando pago...';
-    paymentMessage.className = 'form-message';
-    showLoading();
-
-    try {
-        const formData = new FormData();
-        formData.append('action', 'addPayment');
-        formData.append('ID_Transaccion', saleId);
-        formData.append('Monto_Pago', amount);
-
-        const response = await fetch(scriptURL, { method: 'POST', body: formData });
-        const resultText = await response.text();
-
-        if (response.ok && !resultText.includes("Error")) {
-            alert('¡Pago registrado con éxito!');
-           
-            loadPendingSales();
-        } else {
-            alert(resultText || 'Error al registrar el pago.');
-        }
-    } catch (error) {
-        alert('Hubo un problema de conexión.');
-    } finally {
-        hideLoading();
-    }
-}
     function addProductField() {
         const productsListDiv = document.getElementById('products-list');
+        if (!productsListDiv) return;
         const index = salesProducts.length;
 
+        const productItem = document.createElement('div');
+        productItem.className = 'product-item';
+        productItem.id = `product-item-${index}`;
+
+        if (allProducts.length === 0) {
+            productItem.innerHTML = '<p>No hay productos en el inventario para vender.</p>';
+            productsListDiv.appendChild(productItem);
+            return;
+        }
+
         const productSelect = document.createElement('select');
-        productSelect.innerHTML = allProducts.map(p => 
-            `<option value="${p.ID_Producto}" data-price="${p.Precio}" data-stock="${p.Stock}">${p.Nombre_del_producto} (Stock: ${p.Stock})</option>`
-        ).join('');
+        productSelect.innerHTML = allProducts
+            .filter(p => p.Stock > 0)
+            .map(p => `<option value="${p.ID_Producto}">${p.Nombre_del_producto} (Stock: ${p.Stock})</option>`)
+            .join('');
         productSelect.onchange = (e) => updateProduct(index, e.target.value, salesProducts[index].cantidad);
 
         const quantityInput = document.createElement('input');
         quantityInput.type = 'number';
         quantityInput.value = 1;
         quantityInput.min = 1;
-        quantityInput.onchange = (e) => updateProduct(index, salesProducts[index].id, parseInt(e.target.value));
+        quantityInput.oninput = (e) => updateProduct(index, salesProducts[index].id, parseInt(e.target.value));
         quantityInput.style.width = '80px';
         
         const removeButton = document.createElement('button');
@@ -1280,64 +1277,47 @@ async function handleUniversalPayment(saleId, currentDebt, containerId) {
         removeButton.className = 'btn-remove';
         removeButton.onclick = () => removeProductField(index);
 
-        const productItem = document.createElement('div');
-        productItem.className = 'product-item';
-        productItem.id = `product-item-${index}`;
         productItem.appendChild(productSelect);
         productItem.appendChild(quantityInput);
         productItem.appendChild(removeButton);
         productsListDiv.appendChild(productItem);
 
-        if (allProducts.length > 0) {
-            salesProducts.push({
-                id: allProducts[0].ID_Producto,
-                cantidad: 1
-            });
+        const selectedProduct = allProducts.find(p => p.ID_Producto == productSelect.value);
+        if (selectedProduct) {
+            salesProducts.push({ id: selectedProduct.ID_Producto, cantidad: 1 });
+            quantityInput.max = selectedProduct.Stock;
         }
     }
 
     function updateProduct(index, productId, quantity) {
         salesProducts[index].id = productId;
-        salesProducts[index].cantidad = quantity;
+        salesProducts[index].cantidad = quantity || 1;
+        
+        const product = allProducts.find(p => p.ID_Producto == productId);
+        const productItem = document.getElementById(`product-item-${index}`);
+        if(product && productItem) {
+            const quantityInput = productItem.querySelector('input[type="number"]');
+            quantityInput.max = product.Stock;
+            if (quantity > product.Stock) {
+                quantityInput.value = product.Stock;
+                salesProducts[index].cantidad = product.Stock;
+            }
+        }
     }
 
     function removeProductField(index) {
-        const element = document.getElementById(`product-item-${index}`);
-        if (element) {
-            element.remove();
-        }
         salesProducts.splice(index, 1);
-
         const productsListDiv = document.getElementById('products-list');
         productsListDiv.innerHTML = '';
-        salesProducts.forEach((p, i) => {
-            const productSelect = document.createElement('select');
-            productSelect.innerHTML = allProducts.map(prod => 
-                `<option value="${prod.ID_Producto}" data-price="${prod.Precio}" data-stock="${prod.Stock}">${prod.Nombre_del_producto} (Stock: ${prod.Stock})</option>`
-            ).join('');
-            productSelect.value = p.id;
-            productSelect.onchange = (e) => updateProduct(i, e.target.value, salesProducts[i].cantidad);
-
-            const quantityInput = document.createElement('input');
-            quantityInput.type = 'number';
-            quantityInput.value = p.cantidad;
-            quantityInput.min = 1;
-            quantityInput.onchange = (e) => updateProduct(i, salesProducts[i].id, parseInt(e.target.value));
-            quantityInput.style.width = '80px';
-            
-            const removeButton = document.createElement('button');
-            removeButton.textContent = '-';
-            removeButton.type = 'button';
-            removeButton.className = 'btn-remove';
-            removeButton.onclick = () => removeProductField(i);
-
-            const productItem = document.createElement('div');
-            productItem.className = 'product-item';
-            productItem.id = `product-item-${i}`;
-            productItem.appendChild(productSelect);
-            productItem.appendChild(quantityInput);
-            productItem.appendChild(removeButton);
-            productsListDiv.appendChild(productItem);
+        const tempSalesProducts = [...salesProducts];
+        salesProducts = [];
+        tempSalesProducts.forEach(p => {
+             addProductField();
+             const newIndex = salesProducts.length - 1;
+             const newItem = document.getElementById(`product-item-${newIndex}`);
+             newItem.querySelector('select').value = p.id;
+             newItem.querySelector('input').value = p.cantidad;
+             updateProduct(newIndex, p.id, p.cantidad);
         });
     }
 
@@ -1352,111 +1332,83 @@ async function handleUniversalPayment(saleId, currentDebt, containerId) {
     }
 
     const addProductForm = document.getElementById('addProductForm');
-    const addProductMessage = document.getElementById('add-product-message');
-    if (addProductForm) {
-      addProductForm.addEventListener('submit', async (e) => {
+    addProductForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const addProductMessage = document.getElementById('add-product-message');
         addProductMessage.textContent = 'Enviando...';
         addProductMessage.className = 'form-message';
         showLoading();
         
-        const productName = document.getElementById('product-name').value;
-        const productPrice = document.getElementById('product-price').value;
-        const productStock = document.getElementById('product-stock').value;
-
-        if (!productName.trim()) {
-            addProductMessage.textContent = 'El nombre del producto es obligatorio.';
-            addProductMessage.className = 'form-message error';
-            hideLoading();
-            return;
-        }
-        if (!productStock || parseInt(productStock) <= 0) {
-            addProductMessage.textContent = 'La cantidad a añadir debe ser un número positivo.';
-            addProductMessage.className = 'form-message error';
-            hideLoading();
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('action', 'addProduct');
-        formData.append('Nombre_del_producto', productName);
-        formData.append('Precio', productPrice);
-        formData.append('Stock', productStock);
-        
-
         try {
-          const response = await fetch(scriptURL, { method: 'POST', body: formData });
-          const resultText = await response.text();
-          if (response.ok) {
-            if (resultText.includes("Error")) {
-              addProductMessage.textContent = resultText;
-              addProductMessage.className = 'form-message error';
+            const formData = new FormData(addProductForm);
+            const response = await fetch(scriptURL, { method: 'POST', body: formData });
+            const resultText = await response.text();
+
+            if (response.ok && !resultText.includes("Error")) {
+                addProductMessage.textContent = '¡Operación exitosa!';
+                addProductMessage.className = 'form-message success';
+                addProductForm.reset();
+                await fetchProducts(); // Actualiza la lista de productos
+                loadInventory();     // Recarga la vista del inventario
             } else {
-              addProductMessage.textContent = '¡Operación exitosa!';
-              addProductMessage.className = 'form-message success';
-              addProductForm.reset();
-              loadInventory();
+                addProductMessage.textContent = resultText || 'Error al procesar la solicitud.';
+                addProductMessage.className = 'form-message error';
             }
-          } else {
-            addProductMessage.textContent = 'Error al procesar la solicitud.';
-            addProductMessage.className = 'form-message error';
-          }
         } catch (error) {
-          addProductMessage.textContent = 'Hubo un problema de conexión.';
-          addProductMessage.className = 'form-message error';
+            addProductMessage.textContent = 'Hubo un problema de conexión.';
+            addProductMessage.className = 'form-message error';
         } finally {
             hideLoading();
         }
-      });
-    }
+    });
     
-    const editProductForm = document.getElementById('editProductForm');
-    const editProductMessage = document.getElementById('edit-product-message');
-    if (editProductForm) {
-      editProductForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        editProductMessage.textContent = 'Enviando...';
-        editProductMessage.className = 'form-message';
-        showLoading();
-        
+    async function handleStockUpdate(operation) {
+        const editProductMessage = document.getElementById('edit-product-message');
         const productId = document.getElementById('edit-product-id').value;
         const productName = document.getElementById('edit-product-name').value;
         const productPrice = document.getElementById('edit-product-price').value;
-        const productStock = document.getElementById('edit-product-stock').value;
+        let stockAmount = parseInt(document.getElementById('edit-stock-amount').value);
+
+        if (isNaN(stockAmount) || stockAmount <= 0) {
+            alert('Por favor, introduce una cantidad positiva válida para modificar el stock.');
+            return;
+        }
+
+        if (operation === 'subtract') {
+            stockAmount = -stockAmount; // Convierte el número a negativo para restar
+        }
+
+        editProductMessage.textContent = 'Actualizando...';
+        editProductMessage.className = 'form-message';
+        showLoading();
 
         const formData = new FormData();
         formData.append('action', 'updateProduct');
         formData.append('ID_Producto', productId);
         formData.append('Nombre_del_producto', productName);
         formData.append('Precio', productPrice);
-        formData.append('Stock', productStock);
-        
+        formData.append('Stock', stockAmount);
 
         try {
-          const response = await fetch(scriptURL, { method: 'POST', body: formData });
-          const resultText = await response.text();
-          if (response.ok) {
-            if (resultText.includes("Error")) {
-              editProductMessage.textContent = resultText;
-              editProductMessage.className = 'form-message error';
+            const response = await fetch(scriptURL, { method: 'POST', body: formData });
+            const resultText = await response.text();
+
+            if (response.ok && !resultText.includes("Error")) {
+                editProductMessage.textContent = '¡Producto actualizado con éxito!';
+                editProductMessage.className = 'form-message success';
+                await fetchProducts();
+                loadInventory();
+                cancelEdit();
             } else {
-              editProductMessage.textContent = '¡Operación exitosa!';
-              editProductMessage.className = 'form-message success';
-              editProductForm.reset();
-              loadInventory();
-              cancelEdit();
+                editProductMessage.textContent = resultText;
+                editProductMessage.className = 'form-message error';
             }
-          } else {
-            editProductMessage.textContent = 'Error al procesar la solicitud.';
-            editProductMessage.className = 'form-message error';
-          }
         } catch (error) {
-          editProductMessage.textContent = 'Hubo un problema de conexión.';
-          editProductMessage.className = 'form-message error';
+            editProductMessage.textContent = 'Hubo un problema de conexión.';
+            editProductMessage.className = 'form-message error';
         } finally {
             hideLoading();
         }
-      });
     }
 
     function toggleManual() {
